@@ -28,8 +28,8 @@ export function Kbd({ shortcut, className }: KbdProps) {
           key={`${key}-${index}`}
           className={clsx(
             'inline-flex h-5 min-w-5 items-center justify-center rounded-sm px-1',
-            'border-border border-b-border-strong bg-bg-inset border',
-            'text-ui-xs text-fg-muted tabular font-medium',
+            'border border-border border-b-border-strong bg-bg-inset',
+            'tabular text-ui-xs font-medium text-fg-muted',
           )}
         >
           {key}

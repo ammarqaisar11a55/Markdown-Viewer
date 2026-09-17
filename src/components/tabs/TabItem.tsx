@@ -61,15 +61,15 @@ export const TabItem = memo(function TabItem({ id, active, onKeyDown }: TabItemP
         }}
         onContextMenu={onContextMenu}
         className={clsx(
-          'focus-inset group border-border relative flex h-full max-w-[220px] min-w-[112px] items-center gap-1.5 border-r pr-1.5 pl-3',
+          'focus-inset group relative flex h-full max-w-[220px] min-w-[112px] items-center gap-1.5 border-r border-border pr-1.5 pl-3',
           'text-ui transition-colors duration-100',
           active
             ? 'bg-bg text-fg'
-            : 'text-fg-muted hover:bg-bg-muted/60 hover:text-fg bg-transparent',
+            : 'bg-transparent text-fg-muted hover:bg-bg-muted/60 hover:text-fg',
         )}
       >
-        {active && <span aria-hidden className="bg-accent absolute inset-x-0 top-0 h-[2px]" />}
-        {active && <span aria-hidden className="bg-bg absolute inset-x-0 -bottom-px h-px" />}
+        {active && <span aria-hidden className="absolute inset-x-0 top-0 h-[2px] bg-accent" />}
+        {active && <span aria-hidden className="absolute inset-x-0 -bottom-px h-px bg-bg" />}
         {status === 'loading' && <Spinner className="size-3" />}
         <span className={clsx('min-w-0 flex-1 truncate', status === 'error' && 'text-danger')}>
           {name}
@@ -77,7 +77,7 @@ export const TabItem = memo(function TabItem({ id, active, onKeyDown }: TabItemP
         {changed && <span className="sr-only">(changed on disk)</span>}
         <span className="relative flex size-5 shrink-0 items-center justify-center">
           {changed && (
-            <span aria-hidden className="bg-warning size-2 rounded-full group-hover:opacity-0" />
+            <span aria-hidden className="size-2 rounded-full bg-warning group-hover:opacity-0" />
           )}
           <button
             type="button"
@@ -88,8 +88,8 @@ export const TabItem = memo(function TabItem({ id, active, onKeyDown }: TabItemP
               closeTab(id);
             }}
             className={clsx(
-              'text-fg-subtle absolute inset-0 flex items-center justify-center rounded-sm',
-              'hover:bg-bg-muted hover:text-fg transition-colors duration-100',
+              'absolute inset-0 flex items-center justify-center rounded-sm text-fg-subtle',
+              'transition-colors duration-100 hover:bg-bg-muted hover:text-fg',
               active || changed
                 ? ''
                 : 'opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100',

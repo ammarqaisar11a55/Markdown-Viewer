@@ -22,12 +22,12 @@ export function DocumentErrorPanel({ tabId, path, error }: DocumentErrorPanelPro
         role="alert"
         className="m-auto flex max-w-md flex-col items-center px-6 py-12 text-center"
       >
-        <div className="bg-danger-subtle text-danger flex size-10 items-center justify-center rounded-lg">
+        <div className="flex size-10 items-center justify-center rounded-lg bg-danger-subtle text-danger">
           <FileWarning aria-hidden className="size-5" />
         </div>
-        <h2 className="text-ui-lg text-fg mt-4 font-semibold">{title}</h2>
-        <p className="text-ui text-fg-muted mt-1">{description}</p>
-        <p className="selectable bg-bg-inset text-ui-xs text-fg-subtle mt-3 max-w-full truncate rounded-sm px-2 py-0.5 font-mono">
+        <h2 className="mt-4 text-ui-lg font-semibold text-fg">{title}</h2>
+        <p className="mt-1 text-ui text-fg-muted">{description}</p>
+        <p className="selectable mt-3 max-w-full truncate rounded-sm bg-bg-inset px-2 py-0.5 font-mono text-ui-xs text-fg-subtle">
           {displayPath(path)}
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">

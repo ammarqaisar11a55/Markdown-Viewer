@@ -136,7 +136,7 @@ function ContextMenuPanel() {
       }
       className={clsx(
         'animate-pop-in fixed z-[90] max-h-[calc(100vh-8px)] max-w-80 min-w-48 overflow-y-auto',
-        'border-border bg-bg-elevated text-ui text-fg rounded-md border p-1',
+        'rounded-md border border-border bg-bg-elevated p-1 text-ui text-fg',
         'shadow-(--shadow-popover) focus-visible:outline-none',
       )}
     >
@@ -147,7 +147,7 @@ function ContextMenuPanel() {
               // Separators have no identity of their own.
               key={`separator-${index}`}
               role="separator"
-              className="bg-border mx-1 my-1 h-px"
+              className="mx-1 my-1 h-px bg-border"
             />
           );
         }
@@ -176,7 +176,7 @@ function ContextMenuPanel() {
             }}
             className={clsx(
               'flex h-7 items-center gap-6 rounded-sm px-2',
-              item.disabled && 'text-fg-subtle cursor-default',
+              item.disabled && 'cursor-default text-fg-subtle',
               !item.disabled && item.danger && 'text-danger',
               active && (item.danger ? 'bg-danger-subtle' : 'bg-accent text-accent-fg'),
             )}
@@ -185,7 +185,7 @@ function ContextMenuPanel() {
             {item.shortcut && (
               <span
                 className={clsx(
-                  'text-ui-sm tabular shrink-0',
+                  'tabular shrink-0 text-ui-sm',
                   active && !item.danger ? 'text-accent-fg/80' : 'text-fg-subtle',
                 )}
               >

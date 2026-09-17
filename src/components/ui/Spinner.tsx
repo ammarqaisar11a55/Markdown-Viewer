@@ -11,7 +11,7 @@ export function Spinner({ label, className }: SpinnerProps) {
     <svg
       viewBox="0 0 16 16"
       fill="none"
-      className={clsx('animate-spinner text-fg-subtle size-4', className)}
+      className={clsx('animate-spinner size-4 text-fg-subtle', className)}
       role={label ? 'img' : undefined}
       aria-label={label}
       aria-hidden={label ? undefined : true}

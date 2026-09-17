@@ -58,23 +58,23 @@ function AboutContent() {
       <p className="mt-4 font-serif text-[22px] leading-7 font-semibold tracking-[-0.01em]">
         Markdown Viewer
       </p>
-      <p className="selectable text-ui-sm text-fg-muted tabular mt-1">
+      <p className="selectable tabular mt-1 text-ui-sm text-fg-muted">
         {version ? `Version ${version}` : 'Development build'}
       </p>
-      <p className="text-ui text-fg-muted mt-4 max-w-72">
+      <p className="mt-4 max-w-72 text-ui text-fg-muted">
         A fast, secure, offline reader for Markdown files on Windows and Linux.
       </p>
       <ul aria-label="Built with" className="mt-4 flex flex-wrap justify-center gap-1.5">
         {STACK.map((item) => (
           <li
             key={item}
-            className="border-border bg-bg-inset text-ui-xs text-fg-muted rounded-sm border px-1.5 py-0.5"
+            className="rounded-sm border border-border bg-bg-inset px-1.5 py-0.5 text-ui-xs text-fg-muted"
           >
             {item}
           </li>
         ))}
       </ul>
-      <p className="text-ui-xs text-fg-subtle mt-5">MIT License · © 2026 Muhammad Ammar Qaisar</p>
+      <p className="mt-5 text-ui-xs text-fg-subtle">MIT License · © 2026 Muhammad Ammar Qaisar</p>
     </div>
   );
 }

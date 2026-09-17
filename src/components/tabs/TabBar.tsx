@@ -80,9 +80,9 @@ export function TabBar() {
   }, []);
 
   return (
-    <div className="theme-surface border-border bg-bg-subtle flex h-9 shrink-0 items-stretch border-b">
+    <div className="theme-surface flex h-9 shrink-0 items-stretch border-b border-border bg-bg-subtle">
       {sidebarCollapsed && (
-        <div className="border-border flex shrink-0 items-center border-r px-1.5">
+        <div className="flex shrink-0 items-center border-r border-border px-1.5">
           <IconButton
             label="Show sidebar"
             shortcut={getShortcutLabel('view.toggleSidebar')}

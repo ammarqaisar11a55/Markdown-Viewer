@@ -74,15 +74,15 @@ const ToastItem = memo(function ToastItem({ toast }: { toast: Toast }) {
         setPaused(false);
       }}
       className={clsx(
-        'animate-toast-in theme-surface border-border pointer-events-auto flex gap-2.5 rounded-lg border',
-        'bg-bg-elevated text-ui text-fg py-2.5 pr-2 pl-3 shadow-(--shadow-popover)',
+        'animate-toast-in theme-surface pointer-events-auto flex gap-2.5 rounded-lg border border-border',
+        'bg-bg-elevated py-2.5 pr-2 pl-3 text-ui text-fg shadow-(--shadow-popover)',
       )}
     >
       <Icon aria-hidden className={clsx('mt-0.5 size-4 shrink-0', ICON_COLORS[toast.variant])} />
       <div className="min-w-0 flex-1">
         <p className="font-medium break-words">{toast.title}</p>
         {toast.description && (
-          <p className="selectable text-ui-sm text-fg-muted mt-0.5 break-words">
+          <p className="selectable mt-0.5 text-ui-sm break-words text-fg-muted">
             {toast.description}
           </p>
         )}
@@ -97,10 +97,10 @@ const ToastItem = memo(function ToastItem({ toast }: { toast: Toast }) {
                   action.onClick();
                 }}
                 className={clsx(
-                  'text-ui-sm h-6 rounded-sm px-2 font-medium transition-colors duration-100',
+                  'h-6 rounded-sm px-2 text-ui-sm font-medium transition-colors duration-100',
                   action.primary
                     ? 'bg-accent text-accent-fg hover:brightness-[1.06]'
-                    : 'border-border-strong/80 text-fg hover:bg-bg-muted border',
+                    : 'border border-border-strong/80 text-fg hover:bg-bg-muted',
                 )}
               >
                 {action.label}
@@ -115,7 +115,7 @@ const ToastItem = memo(function ToastItem({ toast }: { toast: Toast }) {
         onClick={() => {
           dismissToast(toast.id);
         }}
-        className="text-fg-subtle hover:bg-bg-muted hover:text-fg flex size-6 shrink-0 items-center justify-center rounded-sm transition-colors duration-100"
+        className="flex size-6 shrink-0 items-center justify-center rounded-sm text-fg-subtle transition-colors duration-100 hover:bg-bg-muted hover:text-fg"
       >
         <X aria-hidden className="size-3.5" />
       </button>

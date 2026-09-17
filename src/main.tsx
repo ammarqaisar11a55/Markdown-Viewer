@@ -18,8 +18,8 @@ async function start(): Promise<void> {
   document.documentElement.dataset.theme = theme;
   document.documentElement.style.colorScheme = theme;
 
-  const container = document.getElementById('root');
-  if (!container) throw new Error('Missing #root element');
+  const container = document.getElementById('app-root');
+  if (!container) throw new Error('Missing #app-root element');
   createRoot(container).render(
     <StrictMode>
       <App />

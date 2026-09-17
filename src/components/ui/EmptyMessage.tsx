@@ -11,9 +11,9 @@ export interface EmptyMessageProps {
 export function EmptyMessage({ icon, title, description, children }: EmptyMessageProps) {
   return (
     <div className="flex flex-col items-center px-6 pt-10 pb-6 text-center">
-      {icon && <div className="text-fg-subtle mb-3 [&_svg]:size-5">{icon}</div>}
-      <p className="text-ui text-fg-muted font-medium">{title}</p>
-      {description && <p className="text-ui-sm text-fg-subtle mt-1">{description}</p>}
+      {icon && <div className="mb-3 text-fg-subtle [&_svg]:size-5">{icon}</div>}
+      <p className="text-ui font-medium text-fg-muted">{title}</p>
+      {description && <p className="mt-1 text-ui-sm text-fg-subtle">{description}</p>}
       {children && <div className="mt-4 flex flex-col items-center gap-2">{children}</div>}
     </div>
   );

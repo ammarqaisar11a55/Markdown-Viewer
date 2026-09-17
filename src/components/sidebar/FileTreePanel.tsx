@@ -47,7 +47,7 @@ export function FileTreePanel() {
     <div className="flex min-h-0 flex-col">
       <div className="group/header flex h-8 shrink-0 items-center gap-1 pr-2 pl-3">
         <Tooltip label={displayPath(rootPath)} className="min-w-0 flex-1">
-          <h2 className="text-ui-sm text-fg-muted min-w-0 truncate font-semibold">{name}</h2>
+          <h2 className="min-w-0 truncate text-ui-sm font-semibold text-fg-muted">{name}</h2>
         </Tooltip>
         <IconButton
           size="sm"
@@ -67,7 +67,7 @@ export function FileTreePanel() {
       </div>
 
       {status === 'loading' && !tree && (
-        <div className="text-ui-sm text-fg-muted flex items-center gap-2 px-4 py-3" role="status">
+        <div className="flex items-center gap-2 px-4 py-3 text-ui-sm text-fg-muted" role="status">
           <Spinner />
           Scanning folder…
         </div>
@@ -97,8 +97,8 @@ export function FileTreePanel() {
             <FileTree root={tree.root} label={`Files in ${name}`} />
           )}
           {tree.truncated && (
-            <p className="bg-warning-subtle text-ui-sm text-fg-muted mx-3 mb-3 flex items-start gap-2 rounded-md px-2.5 py-2">
-              <TriangleAlert aria-hidden className="text-warning mt-0.5 size-3.5 shrink-0" />
+            <p className="mx-3 mb-3 flex items-start gap-2 rounded-md bg-warning-subtle px-2.5 py-2 text-ui-sm text-fg-muted">
+              <TriangleAlert aria-hidden className="mt-0.5 size-3.5 shrink-0 text-warning" />
               This folder is very large; only part of it is shown.
             </p>
           )}

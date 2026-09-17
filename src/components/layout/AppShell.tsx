@@ -46,7 +46,7 @@ export function AppShell() {
   }, [narrow, setSidebarCollapsed]);
 
   return (
-    <div className="bg-bg text-fg flex h-full w-full overflow-hidden">
+    <div className="flex h-full w-full overflow-hidden bg-bg text-fg">
       {!readingMode && <Sidebar />}
       <div className="flex min-w-0 flex-1 flex-col">
         {!readingMode && <TabBar />}

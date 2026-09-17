@@ -54,9 +54,9 @@ export function ReadingModeExit() {
         onClick={() => {
           setReadingMode(false);
         }}
-        className="border-border bg-bg-elevated/95 text-ui-sm text-fg hover:bg-bg-muted flex h-8 items-center gap-2 rounded-full border pr-1.5 pl-3 font-medium shadow-(--shadow-popover) backdrop-blur transition-colors duration-100"
+        className="flex h-8 items-center gap-2 rounded-full border border-border bg-bg-elevated/95 pr-1.5 pl-3 text-ui-sm font-medium text-fg shadow-(--shadow-popover) backdrop-blur transition-colors duration-100 hover:bg-bg-muted"
       >
-        <Minimize2 aria-hidden className="text-fg-muted size-3.5" />
+        <Minimize2 aria-hidden className="size-3.5 text-fg-muted" />
         Exit Reading Mode
         <Kbd shortcut="Esc" />
       </button>

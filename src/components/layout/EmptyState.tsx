@@ -22,10 +22,10 @@ export function EmptyState() {
     <div className="flex h-full min-h-0 overflow-y-auto">
       <div className="m-auto flex w-full max-w-[420px] flex-col items-center px-6 py-12 text-center">
         <AppMark className="size-12" />
-        <h1 className="text-fg mt-5 font-serif text-[28px] leading-9 font-semibold tracking-[-0.015em]">
+        <h1 className="mt-5 font-serif text-[28px] leading-9 font-semibold tracking-[-0.015em] text-fg">
           Markdown Viewer
         </h1>
-        <p className="text-fg-muted mt-1 font-serif text-[17px] leading-6 italic">
+        <p className="mt-1 font-serif text-[17px] leading-6 text-fg-muted italic">
           Read Markdown beautifully.
         </p>
 
@@ -37,7 +37,7 @@ export function EmptyState() {
         >
           Open Markdown File
         </Button>
-        <p className="text-ui-sm text-fg-subtle mt-3">or drag a .md file here</p>
+        <p className="mt-3 text-ui-sm text-fg-subtle">or drag a .md file here</p>
         {openShortcut && <Kbd shortcut={openShortcut} className="mt-3" />}
 
         <Tooltip label="Open a folder of Markdown files" shortcut={folderShortcut} side="bottom">
@@ -56,7 +56,7 @@ export function EmptyState() {
           <section aria-labelledby="empty-recent-title" className="mt-10 w-full text-left">
             <h2
               id="empty-recent-title"
-              className="border-border text-ui-sm text-fg-muted border-b px-2 pb-1.5 font-medium"
+              className="border-b border-border px-2 pb-1.5 text-ui-sm font-medium text-fg-muted"
             >
               Recent files
             </h2>
@@ -69,24 +69,24 @@ export function EmptyState() {
                       onClick={() => void openDocument(item.path)}
                       className={clsx(
                         'group flex h-8 w-full min-w-0 items-center gap-2.5 rounded-md px-2 text-left',
-                        'hover:bg-bg-muted transition-colors duration-100',
+                        'transition-colors duration-100 hover:bg-bg-muted',
                         item.missing && 'opacity-60',
                       )}
                     >
-                      <FileText aria-hidden className="text-fg-subtle size-4 shrink-0" />
+                      <FileText aria-hidden className="size-4 shrink-0 text-fg-subtle" />
                       <span
                         className={clsx(
-                          'text-ui text-fg min-w-0 shrink-0 truncate',
+                          'min-w-0 shrink-0 truncate text-ui text-fg',
                           item.missing && 'line-through',
                         )}
                       >
                         {item.name}
                       </span>
-                      <span className="text-ui-sm text-fg-subtle min-w-0 flex-1 truncate">
+                      <span className="min-w-0 flex-1 truncate text-ui-sm text-fg-subtle">
                         {displayPath(dirname(item.path))}
                       </span>
                       {item.missing && (
-                        <span className="text-ui-xs text-fg-subtle shrink-0">Missing</span>
+                        <span className="shrink-0 text-ui-xs text-fg-subtle">Missing</span>
                       )}
                     </button>
                   </Tooltip>

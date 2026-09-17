@@ -17,7 +17,7 @@ export function SettingRow({ label, description, children }: SettingRowProps) {
           {label}
         </p>
         {description && (
-          <p id={descriptionId} className="text-ui-sm text-fg-subtle mt-0.5">
+          <p id={descriptionId} className="mt-0.5 text-ui-sm text-fg-subtle">
             {description}
           </p>
         )}
@@ -33,10 +33,10 @@ export function SettingSection({ title, children }: { title: string; children: R
   const id = useId();
   return (
     <section aria-labelledby={id} className="px-5 pt-4 pb-2">
-      <h3 id={id} className="text-ui-sm text-fg-muted pb-1 font-semibold">
+      <h3 id={id} className="pb-1 text-ui-sm font-semibold text-fg-muted">
         {title}
       </h3>
-      <div className="divide-border divide-y">{children}</div>
+      <div className="divide-y divide-border">{children}</div>
     </section>
   );
 }

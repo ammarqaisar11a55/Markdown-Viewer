@@ -54,7 +54,7 @@ export function SegmentedControl<T extends string>({
       aria-label={label}
       aria-labelledby={labelledBy}
       className={clsx(
-        'border-border bg-bg-inset inline-flex h-7 items-center gap-0.5 rounded-md border p-0.5',
+        'inline-flex h-7 items-center gap-0.5 rounded-md border border-border bg-bg-inset p-0.5',
         className,
       )}
     >
@@ -72,7 +72,7 @@ export function SegmentedControl<T extends string>({
               onChange(option.value);
             }}
             className={clsx(
-              'text-ui-sm inline-flex h-full items-center gap-1.5 rounded-sm px-2.5 font-medium',
+              'inline-flex h-full items-center gap-1.5 rounded-sm px-2.5 text-ui-sm font-medium',
               'transition-colors duration-100 [&_svg]:size-3.5',
               selected
                 ? 'bg-bg-elevated text-fg shadow-[0_0_0_1px_var(--border),0_1px_2px_rgb(0_0_0/0.06)]'

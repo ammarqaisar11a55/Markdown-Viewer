@@ -41,7 +41,7 @@ export function Slider({
         style={{ '--fill': `${percent}%` } as CSSProperties}
         className="mv-slider h-5 w-36 cursor-pointer appearance-none bg-transparent"
       />
-      <output htmlFor={id} className="text-ui-sm text-fg-muted tabular w-11 text-right" aria-hidden>
+      <output htmlFor={id} className="tabular w-11 text-right text-ui-sm text-fg-muted" aria-hidden>
         {text}
       </output>
     </div>

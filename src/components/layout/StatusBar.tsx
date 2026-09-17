@@ -36,7 +36,7 @@ export const StatusBar = memo(function StatusBar() {
   return (
     <footer
       aria-label="Status bar"
-      className="theme-surface border-border bg-bg-subtle text-ui-xs text-fg-muted flex h-6 shrink-0 items-center gap-2 border-t px-1.5"
+      className="theme-surface flex h-6 shrink-0 items-center gap-2 border-t border-border bg-bg-subtle px-1.5 text-ui-xs text-fg-muted"
     >
       <div className="flex h-full min-w-0 flex-1 items-center py-0.5">
         {path && (

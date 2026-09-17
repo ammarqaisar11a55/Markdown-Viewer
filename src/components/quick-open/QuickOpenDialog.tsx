@@ -114,8 +114,8 @@ function QuickOpenPanel({
 
   return (
     <div className="flex max-h-[min(520px,70vh)] flex-col">
-      <div className="border-border flex h-11 shrink-0 items-center gap-2.5 border-b px-3.5">
-        <Search aria-hidden className="text-fg-subtle size-4 shrink-0" />
+      <div className="flex h-11 shrink-0 items-center gap-2.5 border-b border-border px-3.5">
+        <Search aria-hidden className="size-4 shrink-0 text-fg-subtle" />
         <input
           ref={inputRef}
           type="text"
@@ -134,7 +134,7 @@ function QuickOpenPanel({
             setSelected(0);
           }}
           onKeyDown={onKeyDown}
-          className="text-ui-lg text-fg placeholder:text-fg-subtle h-full min-w-0 flex-1 bg-transparent outline-none focus-visible:outline-none"
+          className="h-full min-w-0 flex-1 bg-transparent text-ui-lg text-fg outline-none placeholder:text-fg-subtle focus-visible:outline-none"
         />
       </div>
       <div
@@ -145,7 +145,7 @@ function QuickOpenPanel({
         className="min-h-0 flex-1 overflow-y-auto p-1.5"
       >
         {results.length === 0 && (
-          <p className="text-ui text-fg-muted px-3 py-8 text-center">
+          <p className="px-3 py-8 text-center text-ui text-fg-muted">
             {items.length === 0 ? 'Open a file or folder to search it here.' : 'No matching files.'}
           </p>
         )}
@@ -157,7 +157,7 @@ function QuickOpenPanel({
               {showHeader && (
                 <div
                   role="presentation"
-                  className="text-ui-xs text-fg-subtle px-2.5 pt-2 pb-1 font-medium"
+                  className="px-2.5 pt-2 pb-1 text-ui-xs font-medium text-fg-subtle"
                 >
                   {result.item.group}
                 </div>
@@ -177,7 +177,7 @@ function QuickOpenPanel({
           );
         })}
       </div>
-      <div className="border-border text-ui-xs text-fg-subtle flex h-8 shrink-0 items-center gap-4 border-t px-3.5">
+      <div className="flex h-8 shrink-0 items-center gap-4 border-t border-border px-3.5 text-ui-xs text-fg-subtle">
         <span className="flex items-center gap-1.5">
           <Kbd shortcut="↑" />
           <Kbd shortcut="↓" />
@@ -246,14 +246,14 @@ const QuickOpenOption = memo(function QuickOpenOption({
       <HighlightedText
         text={item.name}
         indices={nameIndices}
-        className="text-ui text-fg shrink-0 truncate"
+        className="shrink-0 truncate text-ui text-fg"
       />
       <HighlightedText
         text={dir}
         indices={dirIndices}
-        className="text-ui-sm text-fg-subtle min-w-0 flex-1 truncate"
+        className="min-w-0 flex-1 truncate text-ui-sm text-fg-subtle"
       />
-      {showGroup && <span className="text-ui-xs text-fg-subtle shrink-0">{item.group}</span>}
+      {showGroup && <span className="shrink-0 text-ui-xs text-fg-subtle">{item.group}</span>}
     </div>
   );
 });

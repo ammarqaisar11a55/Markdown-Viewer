@@ -17,7 +17,7 @@ export function ExternalChangeBanner({ tabId, kind }: ExternalChangeBannerProps)
     <div
       role="status"
       className={clsx(
-        'border-border text-ui flex h-9 shrink-0 items-center gap-2.5 border-b px-3',
+        'flex h-9 shrink-0 items-center gap-2.5 border-b border-border px-3 text-ui',
         removed ? 'bg-danger-subtle' : 'bg-warning-subtle',
       )}
     >
@@ -25,7 +25,7 @@ export function ExternalChangeBanner({ tabId, kind }: ExternalChangeBannerProps)
         aria-hidden
         className={clsx('size-4 shrink-0', removed ? 'text-danger' : 'text-warning')}
       />
-      <p className="text-fg min-w-0 flex-1 truncate">
+      <p className="min-w-0 flex-1 truncate text-fg">
         {removed ? 'File was deleted or moved.' : 'This file changed on disk.'}
       </p>
       <div className="flex shrink-0 items-center gap-1">

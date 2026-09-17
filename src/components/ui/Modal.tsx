@@ -82,7 +82,7 @@ function ModalContent({
   return (
     <div
       className={clsx(
-        'animate-fade-in bg-scrim fixed inset-0 z-50 flex justify-center p-6',
+        'animate-fade-in fixed inset-0 z-50 flex justify-center bg-scrim p-6',
         placement === 'top' ? 'items-start pt-[12vh]' : 'items-center',
       )}
       onMouseDown={(event) => {
@@ -99,7 +99,7 @@ function ModalContent({
         tabIndex={-1}
         className={clsx(
           'animate-pop-in flex max-h-full w-full flex-col overflow-hidden rounded-lg',
-          'border-border bg-bg-elevated text-fg border shadow-(--shadow-modal)',
+          'border border-border bg-bg-elevated text-fg shadow-(--shadow-modal)',
           WIDTHS[size],
           className,
         )}
@@ -109,13 +109,13 @@ function ModalContent({
             {title}
           </h2>
         ) : (
-          <header className="border-border flex shrink-0 items-start gap-3 border-b px-5 py-3.5">
+          <header className="flex shrink-0 items-start gap-3 border-b border-border px-5 py-3.5">
             <div className="min-w-0 flex-1">
               <h2 id={titleId} className="text-ui-lg font-semibold tracking-[-0.01em]">
                 {title}
               </h2>
               {description && (
-                <p id={descriptionId} className="text-ui-sm text-fg-muted mt-0.5">
+                <p id={descriptionId} className="mt-0.5 text-ui-sm text-fg-muted">
                   {description}
                 </p>
               )}
@@ -133,7 +133,7 @@ function ModalContent({
         )}
         <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
         {footer && (
-          <footer className="border-border flex shrink-0 items-center justify-end gap-2 border-t px-5 py-3">
+          <footer className="flex shrink-0 items-center justify-end gap-2 border-t border-border px-5 py-3">
             {footer}
           </footer>
         )}

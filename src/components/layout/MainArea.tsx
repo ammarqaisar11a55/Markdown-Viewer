@@ -14,7 +14,7 @@ export function MainArea() {
 
   if (!hasTabs || !tab) {
     return (
-      <main className="bg-bg relative min-h-0 flex-1">
+      <main className="relative min-h-0 flex-1 bg-bg">
         <EmptyState />
       </main>
     );
@@ -25,7 +25,7 @@ export function MainArea() {
       id={DOCUMENT_PANEL_ID}
       role="tabpanel"
       aria-labelledby={`tab-${tab.id}`}
-      className="bg-bg relative flex min-h-0 flex-1 flex-col"
+      className="relative flex min-h-0 flex-1 flex-col bg-bg"
     >
       {tab.externalChange && <ExternalChangeBanner tabId={tab.id} kind={tab.externalChange} />}
       <div className="relative min-h-0 flex-1">

@@ -29,7 +29,7 @@ export function SidebarViewSwitcher() {
       ref={listRef}
       role="tablist"
       aria-label="Sidebar views"
-      className="border-border bg-bg-inset mx-3 flex h-7 shrink-0 items-center gap-0.5 rounded-md border p-0.5"
+      className="mx-3 flex h-7 shrink-0 items-center gap-0.5 rounded-md border border-border bg-bg-inset p-0.5"
     >
       {SIDEBAR_VIEWS.map(({ value, label, icon: Icon }) => {
         const selected = value === view;
@@ -47,7 +47,7 @@ export function SidebarViewSwitcher() {
               setSidebarView(value);
             }}
             className={clsx(
-              'text-ui-sm flex h-full min-w-0 flex-1 items-center justify-center gap-1.5 rounded-sm font-medium',
+              'flex h-full min-w-0 flex-1 items-center justify-center gap-1.5 rounded-sm text-ui-sm font-medium',
               'transition-colors duration-100',
               selected
                 ? 'bg-bg-elevated text-fg shadow-[0_0_0_1px_var(--border),0_1px_2px_rgb(0_0_0/0.06)]'

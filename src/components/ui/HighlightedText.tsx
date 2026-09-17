@@ -30,7 +30,7 @@ export const HighlightedText = memo(function HighlightedText({
         const key = offset;
         offset += part.text.length;
         return part.hit ? (
-          <mark key={key} className="text-accent bg-transparent font-semibold">
+          <mark key={key} className="bg-transparent font-semibold text-accent">
             {part.text}
           </mark>
         ) : (

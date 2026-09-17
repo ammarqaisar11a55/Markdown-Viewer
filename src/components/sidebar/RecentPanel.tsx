@@ -45,13 +45,13 @@ export function RecentPanel() {
   return (
     <section aria-labelledby="recent-heading" className="flex min-h-0 flex-col">
       <div className="flex h-8 shrink-0 items-center pr-2 pl-3">
-        <h2 id="recent-heading" className="text-ui-sm text-fg-muted flex-1 font-semibold">
+        <h2 id="recent-heading" className="flex-1 text-ui-sm font-semibold text-fg-muted">
           Recent files
         </h2>
         <button
           type="button"
           onClick={clearRecent}
-          className="text-ui-sm text-fg-muted hover:bg-bg-muted hover:text-fg h-6 rounded-sm px-1.5 transition-colors duration-100"
+          className="h-6 rounded-sm px-1.5 text-ui-sm text-fg-muted transition-colors duration-100 hover:bg-bg-muted hover:text-fg"
         >
           Clear
         </button>
@@ -119,7 +119,7 @@ const RecentItem = memo(function RecentItem({
           <span className="flex min-w-0 items-center gap-1.5">
             <span
               className={clsx(
-                'text-ui min-w-0 truncate',
+                'min-w-0 truncate text-ui',
                 active ? 'text-accent' : 'text-fg',
                 item.missing && 'text-fg-subtle line-through',
               )}
@@ -127,12 +127,12 @@ const RecentItem = memo(function RecentItem({
               {item.name}
             </span>
             {item.missing && (
-              <span className="bg-bg-muted text-ui-xs text-fg-muted shrink-0 rounded-sm px-1">
+              <span className="shrink-0 rounded-sm bg-bg-muted px-1 text-ui-xs text-fg-muted">
                 Missing
               </span>
             )}
           </span>
-          <span className="text-ui-xs text-fg-subtle truncate">
+          <span className="truncate text-ui-xs text-fg-subtle">
             {displayPath(dirname(item.path))}
           </span>
         </span>
@@ -145,7 +145,7 @@ const RecentItem = memo(function RecentItem({
           removeRecent(item.path);
         }}
         className={clsx(
-          'text-fg-subtle absolute top-1.5 right-1.5 flex size-5 items-center justify-center rounded-sm',
+          'absolute top-1.5 right-1.5 flex size-5 items-center justify-center rounded-sm text-fg-subtle',
           'opacity-0 transition-opacity duration-100 group-hover:opacity-100 focus-visible:opacity-100',
           'hover:bg-bg-muted hover:text-fg',
         )}

@@ -33,7 +33,7 @@ export function Switch({ checked, onChange, id, labelledBy, describedBy, disable
         aria-hidden
         className={clsx(
           'block size-3 rounded-full shadow-sm transition-transform duration-150',
-          checked ? 'bg-accent-fg translate-x-[15px]' : 'bg-bg-elevated translate-x-[2px]',
+          checked ? 'translate-x-[15px] bg-accent-fg' : 'translate-x-[2px] bg-bg-elevated',
         )}
       />
     </button>

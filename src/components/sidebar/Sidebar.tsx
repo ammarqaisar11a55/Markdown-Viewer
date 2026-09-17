@@ -38,7 +38,7 @@ export function Sidebar() {
       aria-label="Sidebar"
       style={{ width }}
       className={clsx(
-        'theme-surface border-border bg-bg-subtle flex h-full shrink-0 flex-col border-r',
+        'theme-surface flex h-full shrink-0 flex-col border-r border-border bg-bg-subtle',
         narrow
           ? 'animate-fade-in fixed inset-y-0 left-0 z-40 max-w-[85vw] shadow-(--shadow-modal)'
           : 'relative',
@@ -66,7 +66,7 @@ export function Sidebar() {
     <>
       <div
         role="presentation"
-        className="animate-fade-in bg-scrim fixed inset-0 z-30"
+        className="animate-fade-in fixed inset-0 z-30 bg-scrim"
         onMouseDown={() => {
           setSidebarCollapsed(true);
         }}

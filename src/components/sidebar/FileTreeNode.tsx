@@ -53,12 +53,12 @@ export const FileTreeNode = memo(function FileTreeNode({
       }}
       style={{ paddingLeft: 4 + (level - 1) * INDENT_PX }}
       className={clsx(
-        'focus-inset text-ui flex h-7 min-w-0 items-center gap-1 rounded-md pr-2',
+        'focus-inset flex h-7 min-w-0 items-center gap-1 rounded-md pr-2 text-ui',
         'transition-colors duration-75',
         selected
           ? 'bg-accent-subtle text-accent'
           : disabled
-            ? 'text-fg-subtle cursor-default'
+            ? 'cursor-default text-fg-subtle'
             : 'text-fg hover:bg-bg-muted',
       )}
     >
@@ -67,7 +67,7 @@ export const FileTreeNode = memo(function FileTreeNode({
           <ChevronRight
             aria-hidden
             className={clsx(
-              'text-fg-subtle size-3.5 transition-transform duration-100',
+              'size-3.5 text-fg-subtle transition-transform duration-100',
               expanded && 'rotate-90',
             )}
           />

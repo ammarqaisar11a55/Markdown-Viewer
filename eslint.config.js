@@ -33,7 +33,10 @@ export default tseslint.config(
       '@typescript-eslint/consistent-type-imports': 'error',
       '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
       '@typescript-eslint/no-confusing-void-expression': ['error', { ignoreArrowShorthand: true }],
-      '@typescript-eslint/no-misused-promises': ['error', { checksVoidReturn: { attributes: false } }],
+      '@typescript-eslint/no-misused-promises': [
+        'error',
+        { checksVoidReturn: { attributes: false } },
+      ],
       'no-console': ['error', { allow: ['warn', 'error', 'info', 'debug'] }],
       eqeqeq: ['error', 'always'],
     },

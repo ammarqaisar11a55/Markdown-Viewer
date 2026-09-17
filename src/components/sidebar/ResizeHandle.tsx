@@ -91,7 +91,7 @@ export function ResizeHandle({ controls }: { controls: string }) {
           'mx-auto h-full w-[2px] transition-colors duration-150',
           dragging
             ? 'bg-accent'
-            : 'group-hover:bg-accent/60 group-focus-visible:bg-accent bg-transparent',
+            : 'bg-transparent group-hover:bg-accent/60 group-focus-visible:bg-accent',
         )}
       />
     </div>

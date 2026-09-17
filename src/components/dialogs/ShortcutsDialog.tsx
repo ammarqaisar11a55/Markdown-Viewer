@@ -60,14 +60,14 @@ function ShortcutGroup({ title, rows }: { title: string; rows: readonly Row[] })
   if (rows.length === 0) return null;
   return (
     <section className="mt-3 break-inside-avoid">
-      <h3 className="border-border text-ui-sm text-fg-muted border-b pb-1.5 font-semibold">
+      <h3 className="border-b border-border pb-1.5 text-ui-sm font-semibold text-fg-muted">
         {title}
       </h3>
       <dl className="mt-1">
         {rows.map((row) => (
           <div key={row.label} className="flex min-h-8 items-center gap-3 py-1">
-            <dt className="text-ui text-fg min-w-0 flex-1">{row.label}</dt>
-            <dd className="text-ui-xs text-fg-subtle flex shrink-0 items-center gap-1.5">
+            <dt className="min-w-0 flex-1 text-ui text-fg">{row.label}</dt>
+            <dd className="flex shrink-0 items-center gap-1.5 text-ui-xs text-fg-subtle">
               {row.shortcuts.map((shortcut, index) => (
                 <Fragment key={shortcut}>
                   {index > 0 && <span>or</span>}

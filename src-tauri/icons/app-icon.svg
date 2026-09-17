@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <title>Markdown Viewer</title>
+  <!-- Rounded-square base with a soft top-down shade -->
+  <defs>
+    <linearGradient id="base" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#23262e"/>
+      <stop offset="1" stop-color="#16181d"/>
+    </linearGradient>
+  </defs>
+  <rect x="64" y="64" width="896" height="896" rx="200" fill="url(#base)"/>
+  <rect x="65.5" y="65.5" width="893" height="893" rx="198.5" fill="none" stroke="#ffffff" stroke-opacity="0.08" stroke-width="3"/>
+  <!-- Document page with folded corner -->
+  <path d="M300 196h300l168 168v424a44 44 0 0 1-44 44H300a44 44 0 0 1-44-44V240a44 44 0 0 1 44-44z" fill="#f5f7fb"/>
+  <path d="M600 196v124a44 44 0 0 0 44 44h124z" fill="#c9d3e6"/>
+  <!-- "M" mark -->
+  <path d="M338 704V468h58l66 92 66-92h58v236h-62V566l-62 84-62-84v138z" fill="#16181d"/>
+  <!-- Down arrow in accent blue -->
+  <path d="M632 468h64v130h56l-88 106-88-106h56z" fill="#2f6fde"/>
+</svg>

@@ -56,6 +56,7 @@ jobs:
       - run: npm ci
 
       - name: Build and publish release
+        id: tauri
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -73,8 +74,8 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $version = "${{ env.TAG }}".TrimStart('v')
-          $name = "Markdown-Viewer_${version}_x64_portable.zip"
+          $version = "${{ steps.tauri.outputs.appVersion }}"
+          $name = "Markdown-Viewer_${version}_windows_x64_portable.zip"
           Compress-Archive -Path src-tauri/target/release/markdown-viewer.exe, LICENSE -DestinationPath $name
           "PORTABLE_ZIP=$name" | Out-File -FilePath $env:GITHUB_ENV -Append
 

@@ -91,4 +91,8 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload "${{ github.ref_name }}" "$env:PORTABLE_ZIP" --clobber
+        run: |
+          # Derive the tag from the release this build published, so the upload
+          # always targets that same release.
+          $tag = ("${{ steps.tauri.outputs.releaseHtmlUrl }}" -split '/')[-1]
+          gh release upload "$tag" "$env:PORTABLE_ZIP" --clobber

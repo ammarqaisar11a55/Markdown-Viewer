@@ -53,6 +53,60 @@ pub fn read_image(path: &Path) -> Result<(Vec<u8>, &'static str), FsError> {
     Ok((fs::read(path)?, mime))
 }
 
+/// Outcome of a local image request, mapped to an HTTP status by the shell.
+#[derive(Debug, PartialEq, Eq)]
+pub enum AssetResponse {
+    Ok {
+        bytes: Vec<u8>,
+        mime: &'static str,
+    },
+    /// 404: malformed URL, missing file or not a file.
+    NotFound,
+    /// 403: not an image, or not readable.
+    Forbidden,
+    /// 413: larger than [`MAX_IMAGE_BYTES`].
+    TooLarge,
+    /// 500: any other I/O failure.
+    Failed,
+}
+
+impl AssetResponse {
+    pub fn status(&self) -> u16 {
+        match self {
+            Self::Ok { .. } => 200,
+            Self::NotFound => 404,
+            Self::Forbidden => 403,
+            Self::TooLarge => 413,
+            Self::Failed => 500,
+        }
+    }
+}
+
+/// Resolves the path component of a local image URL and loads the image.
+///
+/// Symbolic links are resolved first and the *target* must be a supported
+/// image, so a link named `pic.png` cannot expose an arbitrary file.
+pub fn load_asset(url_path: &str) -> AssetResponse {
+    let Some(path) = decode_asset_path(url_path) else { return AssetResponse::NotFound };
+    let resolved = match dunce::canonicalize(&path) {
+        Ok(resolved) => resolved,
+        Err(err) => return error_response(&FsError::from(err)),
+    };
+    match read_image(&resolved) {
+        Ok((bytes, mime)) => AssetResponse::Ok { bytes, mime },
+        Err(err) => error_response(&err),
+    }
+}
+
+fn error_response(err: &FsError) -> AssetResponse {
+    match err {
+        FsError::NotFound | FsError::NotAFile | FsError::NotADirectory => AssetResponse::NotFound,
+        FsError::PermissionDenied | FsError::UnsupportedType => AssetResponse::Forbidden,
+        FsError::TooLarge { .. } => AssetResponse::TooLarge,
+        FsError::Io(_) => AssetResponse::Failed,
+    }
+}
+
 fn percent_decode(input: &str) -> Option<String> {
     let bytes = input.as_bytes();
     let mut out = Vec::with_capacity(bytes.len());
@@ -94,10 +148,7 @@ mod tests {
             Some(PathBuf::from("/home/me/my pic.png"))
         );
         #[cfg(windows)]
-        assert_eq!(
-            decode_asset_path("/C%3A%5Cdocs%5Cpic.png"),
-            Some(PathBuf::from("C:\\docs\\pic.png"))
-        );
+        assert_eq!(decode_asset_path("/C%3A%5Cdocs%5Cpic.png"), Some(PathBuf::from("C:\\docs\\pic.png")));
         assert_eq!(decode_asset_path("/relative.png"), None);
         assert_eq!(decode_asset_path("/%zz"), None);
         assert_eq!(decode_asset_path("/%2Fa%00b.png"), None);
@@ -117,5 +168,47 @@ mod tests {
         assert_eq!(bytes.len(), 4);
 
         assert_eq!(read_image(&dir.path().join("missing.png")), Err(FsError::NotFound));
+    }
+
+    fn encode(path: &Path) -> String {
+        let mut out = String::from("/");
+        for byte in path.to_string_lossy().bytes() {
+            if byte.is_ascii_alphanumeric() || b"-_.~".contains(&byte) {
+                out.push(char::from(byte));
+            } else {
+                out.push_str(&format!("%{byte:02X}"));
+            }
+        }
+        out
+    }
+
+    #[test]
+    fn loads_assets_with_status_mapping() {
+        let dir = tempfile::tempdir().unwrap();
+        let image = dir.path().join("my pic.png");
+        fs::write(&image, [1, 2, 3]).unwrap();
+        let secret = dir.path().join("secret.txt");
+        fs::write(&secret, "token").unwrap();
+        fs::create_dir(dir.path().join("folder.png")).unwrap();
+
+        let ok = load_asset(&encode(&image));
+        assert_eq!(ok, AssetResponse::Ok { bytes: vec![1, 2, 3], mime: "image/png" });
+        assert_eq!(ok.status(), 200);
+        assert_eq!(load_asset(&encode(&secret)).status(), 403);
+        assert_eq!(load_asset(&encode(&dir.path().join("gone.png"))).status(), 404);
+        assert_eq!(load_asset(&encode(&dir.path().join("folder.png"))).status(), 404);
+        assert_eq!(load_asset("/relative.png").status(), 404);
+        assert_eq!(load_asset("/%zz").status(), 404);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn symlinks_must_point_to_images() {
+        let dir = tempfile::tempdir().unwrap();
+        let secret = dir.path().join("id_rsa");
+        fs::write(&secret, "key").unwrap();
+        let link = dir.path().join("innocent.png");
+        std::os::unix::fs::symlink(&secret, &link).unwrap();
+        assert_eq!(load_asset(&encode(&link)), AssetResponse::Forbidden);
     }
 }

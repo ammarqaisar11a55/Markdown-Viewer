@@ -28,17 +28,31 @@ const ALLOWED_CLASSES: &[&str] = &[
 ];
 
 const EXTRA_TAGS: &[&str] = &[
-    "details", "summary", "input", "section", "kbd", "mark", "sup", "sub", "ins", "del", "s",
-    "figure", "figcaption", "picture", "source", "abbr", "var", "samp", "dl", "dt", "dd",
+    "details",
+    "summary",
+    "input",
+    "section",
+    "kbd",
+    "mark",
+    "sup",
+    "sub",
+    "ins",
+    "del",
+    "s",
+    "figure",
+    "figcaption",
+    "picture",
+    "source",
+    "abbr",
+    "var",
+    "samp",
+    "dl",
+    "dt",
+    "dd",
 ];
 
-const IMAGE_DATA_PREFIXES: &[&str] = &[
-    "data:image/png",
-    "data:image/jpeg",
-    "data:image/gif",
-    "data:image/webp",
-    "data:image/avif",
-];
+const IMAGE_DATA_PREFIXES: &[&str] =
+    &["data:image/png", "data:image/jpeg", "data:image/gif", "data:image/webp", "data:image/avif"];
 
 fn builder() -> &'static Builder<'static> {
     static BUILDER: OnceLock<Builder<'static>> = OnceLock::new();
@@ -76,8 +90,7 @@ fn filter_attribute<'u>(element: &str, attribute: &str, value: &'u str) -> Optio
             let kept: Vec<&str> = value
                 .split_ascii_whitespace()
                 .filter(|class| {
-                    ALLOWED_CLASSES.contains(class)
-                        || (element == "code" && is_language_class(class))
+                    ALLOWED_CLASSES.contains(class) || (element == "code" && is_language_class(class))
                 })
                 .collect();
             (!kept.is_empty()).then(|| Cow::Owned(kept.join(" ")))

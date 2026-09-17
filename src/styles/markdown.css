@@ -1,0 +1,1127 @@
+/*
+ * Reading typography for rendered Markdown, plus the viewer chrome that lives
+ * inside the document (code block headers, image placeholders, lightbox,
+ * banners). Consumes the design tokens from app.css and the `--md-*` variables
+ * set on <html> by useThemeEffect. Theme, font, width and line-number changes
+ * are pure CSS: nothing here requires re-rendering the document.
+ */
+
+/* ------------------------------------------------------------------------ */
+/* Viewer shell                                                             */
+/* ------------------------------------------------------------------------ */
+.md-viewer-root {
+  position: relative;
+  height: 100%;
+  min-height: 0;
+}
+
+.md-viewer {
+  height: 100%;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background-color: var(--bg);
+  transition: var(--transition-theme);
+  scrollbar-gutter: stable;
+}
+
+.md-viewer:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+  border-radius: 0;
+}
+
+.md-viewer-inner {
+  --md-size: calc(var(--md-font-size, 16px) * var(--md-zoom, 1));
+  box-sizing: content-box;
+  max-width: calc(var(--md-content-width, 760px) * var(--md-zoom, 1));
+  margin: 0 auto;
+  padding: clamp(24px, 5vh, 56px) clamp(20px, 5vw, 56px) 30vh;
+  font-size: var(--md-size);
+}
+
+/* `--md-content-width: none` (full width) makes the calc above invalid, which
+   resolves to `max-width: none` — exactly the intended behavior. */
+
+.md-render-progress {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 5;
+  height: 2px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.md-render-progress-bar {
+  height: 100%;
+  background-color: var(--accent);
+  transform-origin: left center;
+  transition: transform 120ms linear;
+}
+
+.md-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  margin: 0 0 1.75rem;
+  padding: 0.6rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--fg);
+}
+
+.md-banner-icon {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+}
+
+.md-banner-warning {
+  border-color: color-mix(in srgb, var(--warning) 28%, transparent);
+  background-color: var(--warning-subtle);
+}
+
+.md-banner-warning .md-banner-icon {
+  color: var(--warning);
+}
+
+.md-banner-info {
+  border-color: color-mix(in srgb, var(--info) 24%, transparent);
+  background-color: var(--info-subtle);
+}
+
+.md-banner-info .md-banner-icon {
+  color: var(--info);
+}
+
+/* Large documents are inserted in chunks that skip layout while off-screen. */
+.md-chunk {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 800px;
+}
+
+.md-chunk > :first-child {
+  margin-top: 0;
+}
+
+.md-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ------------------------------------------------------------------------ */
+/* Base text                                                                */
+/* ------------------------------------------------------------------------ */
+.markdown-body {
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: 1em;
+  line-height: 1.7;
+  font-kerning: normal;
+  font-optical-sizing: auto;
+  overflow-wrap: break-word;
+  text-rendering: optimizeLegibility;
+  cursor: auto;
+}
+
+[data-reading-font='serif'] .markdown-body {
+  font-family: var(--font-serif);
+  font-feature-settings: normal;
+  font-size: 1.06em;
+  line-height: 1.68;
+}
+
+.markdown-body > :first-child {
+  margin-top: 0 !important;
+}
+
+.markdown-body > :last-child {
+  margin-bottom: 0 !important;
+}
+
+.markdown-body [id] {
+  scroll-margin-top: 1.25em;
+}
+
+.markdown-body p,
+.markdown-body ul,
+.markdown-body ol,
+.markdown-body dl,
+.markdown-body blockquote,
+.markdown-body details,
+.markdown-body figure,
+.markdown-body .markdown-alert {
+  margin-top: 0;
+  margin-bottom: 1.15em;
+}
+
+.markdown-body strong,
+.markdown-body b {
+  font-weight: 650;
+}
+
+.markdown-body del,
+.markdown-body s {
+  color: var(--fg-muted);
+  text-decoration-thickness: 1px;
+}
+
+.markdown-body ins {
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--success) 60%, transparent);
+  text-underline-offset: 0.2em;
+}
+
+.markdown-body sup,
+.markdown-body sub {
+  line-height: 0;
+  font-size: 0.75em;
+}
+
+.markdown-body abbr[title] {
+  text-decoration: underline dotted;
+  text-underline-offset: 0.2em;
+  cursor: help;
+}
+
+.markdown-body mark {
+  padding: 0.05em 0.2em;
+  border-radius: 3px;
+  background-color: color-mix(in srgb, #f5c518 38%, transparent);
+  color: inherit;
+}
+
+[data-theme='dark'] .markdown-body mark {
+  background-color: color-mix(in srgb, #e3b341 30%, transparent);
+}
+
+.markdown-body [tabindex='-1']:focus {
+  outline: none;
+  animation: md-target-flash 1.2s ease-out;
+}
+
+@keyframes md-target-flash {
+  from {
+    background-color: var(--accent-subtle);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+
+/* ------------------------------------------------------------------------ */
+/* Headings                                                                 */
+/* ------------------------------------------------------------------------ */
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4,
+.markdown-body h5,
+.markdown-body h6 {
+  position: relative;
+  color: var(--fg);
+  font-weight: 650;
+  line-height: 1.28;
+  text-wrap: balance;
+  border-radius: var(--radius-sm);
+}
+
+.markdown-body h1 {
+  margin: 1.4em 0 0.65em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--border);
+  font-size: 2em;
+  font-weight: 700;
+  letter-spacing: -0.022em;
+  line-height: 1.2;
+}
+
+.markdown-body h2 {
+  margin: 1.65em 0 0.7em;
+  padding-bottom: 0.28em;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  font-size: 1.5em;
+  letter-spacing: -0.018em;
+}
+
+.markdown-body h3 {
+  margin: 1.6em 0 0.6em;
+  font-size: 1.25em;
+  letter-spacing: -0.012em;
+}
+
+.markdown-body h4 {
+  margin: 1.55em 0 0.55em;
+  font-size: 1.0625em;
+  letter-spacing: -0.006em;
+}
+
+.markdown-body h5 {
+  margin: 1.5em 0 0.5em;
+  font-size: 0.9375em;
+}
+
+.markdown-body h6 {
+  margin: 1.5em 0 0.5em;
+  color: var(--fg-muted);
+  font-size: 0.8125em;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+[data-reading-font='serif'] .markdown-body :is(h1, h2, h3, h4) {
+  font-weight: 620;
+  letter-spacing: -0.01em;
+}
+
+.markdown-body :is(h1, h2, h3, h4, h5, h6) code {
+  font-size: 0.85em;
+}
+
+/* Hover anchor: the renderer emits an empty `a.anchor` after the heading text. */
+.markdown-body .anchor {
+  margin-left: 0.3em;
+  padding: 0 0.15em;
+  color: var(--fg-subtle);
+  font-weight: 400;
+  text-decoration: none;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.markdown-body .anchor::before {
+  content: '#';
+}
+
+.markdown-body :is(h1, h2, h3, h4, h5, h6):hover .anchor,
+.markdown-body .anchor:focus-visible {
+  opacity: 1;
+}
+
+.markdown-body .anchor:hover {
+  color: var(--link);
+}
+
+/* ------------------------------------------------------------------------ */
+/* Links                                                                    */
+/* ------------------------------------------------------------------------ */
+.markdown-body a {
+  color: var(--link);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--link) 32%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.22em;
+  transition:
+    color 100ms ease,
+    text-decoration-color 100ms ease;
+  cursor: pointer;
+}
+
+.markdown-body a:hover {
+  color: var(--link-hover);
+  text-decoration-color: currentColor;
+}
+
+.markdown-body a:focus-visible {
+  outline-offset: 2px;
+}
+
+.markdown-body a code {
+  color: inherit;
+}
+
+/* ------------------------------------------------------------------------ */
+/* Lists                                                                    */
+/* ------------------------------------------------------------------------ */
+.markdown-body ul,
+.markdown-body ol {
+  padding-left: 1.65em;
+}
+
+.markdown-body ul {
+  list-style-type: disc;
+}
+
+.markdown-body ul ul {
+  list-style-type: circle;
+}
+
+.markdown-body ul ul ul {
+  list-style-type: square;
+}
+
+.markdown-body ol ol {
+  list-style-type: lower-alpha;
+}
+
+.markdown-body ol ol ol {
+  list-style-type: lower-roman;
+}
+
+.markdown-body li::marker {
+  color: var(--fg-subtle);
+}
+
+.markdown-body ol > li::marker {
+  font-variant-numeric: tabular-nums;
+}
+
+.markdown-body li + li {
+  margin-top: 0.3em;
+}
+
+.markdown-body li > p {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+.markdown-body li > p:first-child {
+  margin-top: 0;
+}
+
+.markdown-body li > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown-body li > ul,
+.markdown-body li > ol {
+  margin-top: 0.3em;
+  margin-bottom: 0;
+}
+
+/* Task lists */
+.markdown-body .contains-task-list {
+  list-style: none;
+  padding-left: 1.65em;
+}
+
+.markdown-body .task-list-item {
+  position: relative;
+}
+
+.markdown-body .task-list-item-checkbox {
+  appearance: none;
+  display: inline-block;
+  box-sizing: border-box;
+  width: 1em;
+  height: 1em;
+  margin: 0 0.55em 0 -1.55em;
+  vertical-align: -0.14em;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 0.25em;
+  background-color: var(--bg);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 78%;
+  accent-color: var(--accent);
+  opacity: 1;
+  cursor: default;
+}
+
+.markdown-body .task-list-item-checkbox:checked {
+  border-color: var(--accent);
+  background-color: var(--accent);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23ffffff' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.5l3 3 6-7'/%3E%3C/svg%3E");
+}
+
+[data-theme='dark'] .markdown-body .task-list-item-checkbox:checked {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%230c1322' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.5l3 3 6-7'/%3E%3C/svg%3E");
+}
+
+.markdown-body .task-list-item .contains-task-list {
+  margin-top: 0.3em;
+}
+
+/* Definition lists */
+.markdown-body dt {
+  margin-top: 0.8em;
+  font-weight: 650;
+}
+
+.markdown-body dt:first-child {
+  margin-top: 0;
+}
+
+.markdown-body dd {
+  margin: 0.2em 0 0 1.5em;
+}
+
+/* ------------------------------------------------------------------------ */
+/* Blocks                                                                   */
+/* ------------------------------------------------------------------------ */
+.markdown-body blockquote {
+  padding: 0.1em 0 0.1em 1.1em;
+  margin-left: 0;
+  margin-right: 0;
+  border-left: 3px solid var(--border-strong);
+  color: var(--fg-muted);
+}
+
+.markdown-body blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown-body blockquote blockquote {
+  margin-top: 0.6em;
+}
+
+.markdown-body hr {
+  height: 0;
+  margin: 2.4em 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+  overflow: visible;
+}
+
+.markdown-body figure {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.markdown-body figcaption {
+  margin-top: 0.5em;
+  color: var(--fg-muted);
+  font-size: 0.875em;
+  text-align: center;
+}
+
+.markdown-body details {
+  padding: 0.45em 0.95em;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.markdown-body details > :last-child {
+  margin-bottom: 0.45em;
+}
+
+.markdown-body summary {
+  margin: -0.45em -0.95em;
+  padding: 0.45em 0.95em;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+}
+
+.markdown-body summary:hover {
+  background-color: var(--bg-subtle);
+}
+
+.markdown-body details[open] > summary {
+  margin-bottom: 0.6em;
+  border-bottom: 1px solid var(--border);
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.markdown-body summary:focus-visible {
+  outline-offset: -2px;
+}
+
+/* ------------------------------------------------------------------------ */
+/* Alerts                                                                   */
+/* ------------------------------------------------------------------------ */
+.markdown-body .markdown-alert {
+  --alert-color: var(--alert-note);
+  padding: 0.65em 1.1em;
+  border-left: 3px solid var(--alert-color);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  background-color: color-mix(in srgb, var(--alert-color) 7%, transparent);
+  color: var(--fg);
+}
+
+[data-theme='dark'] .markdown-body .markdown-alert {
+  background-color: color-mix(in srgb, var(--alert-color) 9%, transparent);
+}
+
+.markdown-body .markdown-alert > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown-body .markdown-alert-title {
+  margin-bottom: 0.3em !important;
+  color: var(--alert-color);
+  font-size: 0.8125em;
+  font-weight: 650;
+  letter-spacing: 0.05em;
+  line-height: 1.5;
+  text-transform: uppercase;
+  font-family: var(--font-sans);
+}
+
+.markdown-body .markdown-alert-note {
+  --alert-color: var(--alert-note);
+}
+
+.markdown-body .markdown-alert-tip {
+  --alert-color: var(--alert-tip);
+}
+
+.markdown-body .markdown-alert-important {
+  --alert-color: var(--alert-important);
+}
+
+.markdown-body .markdown-alert-warning {
+  --alert-color: var(--alert-warning);
+}
+
+.markdown-body .markdown-alert-caution {
+  --alert-color: var(--alert-caution);
+}
+
+/* ------------------------------------------------------------------------ */
+/* Tables                                                                   */
+/* ------------------------------------------------------------------------ */
+.markdown-body .md-table-wrap {
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 0 1.35em;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.markdown-body .md-table-wrap:focus-visible {
+  outline-offset: 2px;
+}
+
+.markdown-body table {
+  border-collapse: collapse;
+  border-spacing: 0;
+  font-size: 0.9375em;
+  line-height: 1.55;
+  font-variant-numeric: tabular-nums;
+}
+
+.markdown-body th,
+.markdown-body td {
+  padding: 0.5em 0.9em;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.markdown-body :is(th, td):last-child {
+  border-right: 0;
+}
+
+.markdown-body tbody tr:last-child > td,
+.markdown-body table > tr:last-child > td {
+  border-bottom: 0;
+}
+
+.markdown-body th {
+  background-color: var(--bg-subtle);
+  color: var(--fg);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.markdown-body th:not([align]) {
+  text-align: start;
+}
+
+.markdown-body tbody tr:nth-child(even) {
+  background-color: color-mix(in srgb, var(--bg-subtle) 55%, transparent);
+}
+
+.markdown-body td > :last-child {
+  margin-bottom: 0;
+}
+
+/* ------------------------------------------------------------------------ */
+/* Code                                                                     */
+/* ------------------------------------------------------------------------ */
+.markdown-body code,
+.markdown-body kbd,
+.markdown-body samp,
+.markdown-body pre {
+  font-family: var(--font-mono);
+  font-variant-ligatures: none;
+}
+
+.markdown-body :not(pre) > code {
+  padding: 0.14em 0.36em;
+  border-radius: 0.3em;
+  background-color: var(--inline-code-bg);
+  font-size: 0.86em;
+  white-space: break-spaces;
+  overflow-wrap: anywhere;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+/* Tables scroll horizontally, so keep short commands and identifiers intact. */
+.markdown-body :is(td, th) :not(pre) > code,
+.markdown-body :is(td, th) > code {
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
+
+.markdown-body kbd {
+  display: inline-block;
+  min-width: 1.6em;
+  padding: 0.12em 0.42em;
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  border-radius: 0.3em;
+  background-color: var(--bg-subtle);
+  color: var(--fg);
+  font-size: 0.78em;
+  line-height: 1.35;
+  text-align: center;
+  vertical-align: 0.08em;
+}
+
+.markdown-body .md-code-block {
+  position: relative;
+  margin: 0 0 1.35em;
+  border: 1px solid var(--code-border);
+  border-radius: 8px;
+  background-color: var(--code-bg);
+  overflow: hidden;
+}
+
+.markdown-body .md-code-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75em;
+  min-height: 2.6em;
+  padding: 0 0.4em 0 1.1em;
+  border-bottom: 1px solid var(--code-border);
+  color: var(--fg-subtle);
+  font-family: var(--font-sans);
+  font-size: calc(12px * var(--md-zoom, 1));
+  line-height: 1;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.markdown-body .md-code-lang {
+  overflow: hidden;
+  font-weight: 550;
+  letter-spacing: 0.02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.markdown-body .md-code-header-floating {
+  position: absolute;
+  top: 0.4em;
+  right: 0.4em;
+  z-index: 1;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+}
+
+.markdown-body .md-code-copy {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.4em;
+  height: 2em;
+  padding: 0 0.6em;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background-color: transparent;
+  color: var(--fg-subtle);
+  font-size: 1em;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity 120ms ease,
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.markdown-body .md-code-header-floating .md-code-copy {
+  width: 2.2em;
+  height: 2.2em;
+  justify-content: center;
+  padding: 0;
+  border-color: var(--code-border);
+  background-color: var(--code-bg);
+}
+
+.markdown-body .md-code-header-floating .md-code-copy-label {
+  display: none;
+}
+
+.markdown-body .md-code-block:hover .md-code-copy,
+.markdown-body .md-code-block:focus-within .md-code-copy,
+.markdown-body .md-code-copy:focus-visible,
+.markdown-body .md-code-copy[data-copied] {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .markdown-body .md-code-copy {
+    opacity: 1;
+  }
+}
+
+.markdown-body .md-code-copy:hover {
+  background-color: var(--bg-muted);
+  color: var(--fg);
+}
+
+.markdown-body .md-code-copy:focus-visible {
+  outline-offset: 0;
+}
+
+.markdown-body .md-code-copy .md-icon {
+  width: 1.15em;
+  height: 1.15em;
+  flex-shrink: 0;
+}
+
+.markdown-body .md-code-copy .md-icon-check,
+.markdown-body .md-code-copy[data-copied] .md-icon-copy {
+  display: none;
+}
+
+.markdown-body .md-code-copy[data-copied] {
+  color: var(--success);
+}
+
+.markdown-body .md-code-copy[data-copied] .md-icon-check {
+  display: inline-block;
+}
+
+.markdown-body pre {
+  margin: 0 0 1.35em;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.markdown-body pre.md-code {
+  margin: 0;
+  padding: 0.95em 1.15em;
+  background: transparent;
+  color: var(--fg);
+  font-size: calc(var(--md-code-font-size, 13px) * var(--md-zoom, 1));
+  line-height: 1.62;
+  tab-size: 4;
+  -moz-tab-size: 4;
+}
+
+.markdown-body pre.md-code:focus-visible {
+  outline-offset: -2px;
+  border-radius: 7px;
+}
+
+.markdown-body pre code {
+  display: block;
+  min-width: max-content;
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  color: inherit;
+  font-size: inherit;
+  white-space: inherit;
+}
+
+/* Syntax colors: both themes are embedded; switching needs no re-highlight. */
+.markdown-body pre code.shiki {
+  color: var(--shiki-light, var(--fg));
+}
+
+.markdown-body .shiki-token {
+  color: var(--shiki-light);
+  font-style: var(--shiki-light-font-style, inherit);
+  font-weight: var(--shiki-light-font-weight, inherit);
+  text-decoration: var(--shiki-light-text-decoration, inherit);
+}
+
+[data-theme='dark'] .markdown-body pre code.shiki {
+  color: var(--shiki-dark, var(--fg));
+}
+
+[data-theme='dark'] .markdown-body .shiki-token {
+  color: var(--shiki-dark);
+  font-style: var(--shiki-dark-font-style, inherit);
+  font-weight: var(--shiki-dark-font-weight, inherit);
+  text-decoration: var(--shiki-dark-text-decoration, inherit);
+}
+
+/* Optional line numbers (CSS counters; not copied with the code). */
+[data-line-numbers='true'] .markdown-body pre.md-code code {
+  counter-reset: md-line;
+}
+
+[data-line-numbers='true'] .markdown-body pre.md-code .line::before {
+  counter-increment: md-line;
+  content: counter(md-line);
+  display: inline-block;
+  width: calc(var(--md-line-digits, 2) * 1ch);
+  margin-right: 1.4em;
+  color: var(--fg-subtle);
+  text-align: right;
+  opacity: 0.75;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ------------------------------------------------------------------------ */
+/* Images                                                                   */
+/* ------------------------------------------------------------------------ */
+.markdown-body img {
+  max-width: 100%;
+  height: auto;
+  border-style: none;
+  vertical-align: middle;
+  box-sizing: content-box;
+}
+
+.markdown-body img.md-image {
+  border-radius: var(--radius-md);
+}
+
+.markdown-body img[data-zoomable] {
+  cursor: zoom-in;
+}
+
+.markdown-body img:focus-visible {
+  outline-offset: 3px;
+}
+
+.markdown-body p > img:only-child {
+  display: block;
+  margin: 0.4em auto;
+}
+
+.markdown-body .md-image-placeholder {
+  display: inline-flex;
+  box-sizing: border-box;
+  align-items: center;
+  gap: 0.65em;
+  max-width: 100%;
+  padding: 0.7em 1em;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  background-color: var(--bg-subtle);
+  color: var(--fg-muted);
+  font-family: var(--font-sans);
+  font-size: 0.875em;
+  line-height: 1.4;
+  vertical-align: middle;
+}
+
+.markdown-body .md-image-placeholder-icon {
+  flex-shrink: 0;
+  width: 1.3em;
+  height: 1.3em;
+  color: var(--fg-subtle);
+}
+
+.markdown-body .md-image-placeholder-text {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.markdown-body .md-image-placeholder-alt {
+  color: var(--fg);
+  font-weight: 550;
+  overflow-wrap: anywhere;
+}
+
+.markdown-body .md-image-placeholder-message {
+  color: var(--fg-subtle);
+  font-size: 0.92em;
+}
+
+/* ------------------------------------------------------------------------ */
+/* Footnotes                                                                */
+/* ------------------------------------------------------------------------ */
+.markdown-body [data-footnote-ref] {
+  padding: 0 0.12em;
+  font-weight: 550;
+  text-decoration: none;
+}
+
+.markdown-body [data-footnote-ref]::before {
+  content: '[';
+}
+
+.markdown-body [data-footnote-ref]::after {
+  content: ']';
+}
+
+.markdown-body .footnotes {
+  margin-top: 3em;
+  padding-top: 1.2em;
+  border-top: 1px solid var(--border);
+  color: var(--fg-muted);
+  font-size: 0.875em;
+}
+
+.markdown-body .footnotes ol {
+  margin-bottom: 0;
+  padding-left: 1.4em;
+}
+
+.markdown-body .footnotes li {
+  margin-top: 0.4em;
+}
+
+.markdown-body .footnotes li p {
+  margin-bottom: 0.4em;
+}
+
+.markdown-body .footnote-backref {
+  margin-left: 0.2em;
+  font-family: var(--font-sans);
+  text-decoration: none;
+}
+
+/* ------------------------------------------------------------------------ */
+/* Selection & search                                                       */
+/* ------------------------------------------------------------------------ */
+.markdown-body ::selection {
+  background-color: var(--selection);
+}
+
+::highlight(search-match) {
+  background-color: var(--search-match);
+  color: inherit;
+}
+
+::highlight(search-current) {
+  background-color: var(--search-current);
+  color: var(--fg);
+}
+
+/* ------------------------------------------------------------------------ */
+/* Image lightbox                                                           */
+/* ------------------------------------------------------------------------ */
+.md-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 56px 48px 40px;
+  background-color: rgb(10 12 16 / 0.86);
+  cursor: zoom-out;
+  animation: md-lightbox-in 140ms ease-out both;
+}
+
+.md-lightbox-dialog {
+  display: contents;
+}
+
+.md-lightbox-figure {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  max-width: 100%;
+  max-height: 100%;
+  margin: 0;
+}
+
+.md-lightbox-image {
+  display: block;
+  max-width: 100%;
+  max-height: calc(100vh - 140px);
+  object-fit: contain;
+  border-radius: var(--radius-md);
+  background-color: var(--bg);
+  box-shadow: 0 24px 64px -12px rgb(0 0 0 / 0.6);
+  cursor: default;
+  user-select: none;
+  -webkit-user-select: none;
+  animation: md-lightbox-zoom 160ms var(--ease-out-soft, ease-out) both;
+}
+
+.md-lightbox-caption {
+  max-width: 70ch;
+  color: rgb(255 255 255 / 0.78);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.45;
+  text-align: center;
+  cursor: default;
+}
+
+.md-lightbox-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background-color: rgb(255 255 255 / 0.12);
+  color: #fff;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.md-lightbox-close:hover {
+  background-color: rgb(255 255 255 / 0.22);
+}
+
+.md-lightbox-close:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+  border-radius: 999px;
+}
+
+.md-lightbox-close svg {
+  width: 18px;
+  height: 18px;
+}
+
+@keyframes md-lightbox-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes md-lightbox-zoom {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .md-lightbox,
+  .md-lightbox-image,
+  .markdown-body [tabindex='-1']:focus {
+    animation: none;
+  }
+
+  .md-render-progress-bar,
+  .markdown-body .anchor,
+  .markdown-body .md-code-copy {
+    transition: none;
+  }
+}

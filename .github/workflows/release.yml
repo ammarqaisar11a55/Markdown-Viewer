@@ -44,7 +44,7 @@ jobs:
 
       - run: npm ci
 
-      - name: Build and publish draft release
+      - name: Build and publish release
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -52,7 +52,7 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: Markdown Viewer ${{ github.ref_name }}
           releaseBody: See CHANGELOG.md for the changes in this release.
-          releaseDraft: true
+          releaseDraft: false
           prerelease: false
           args: --bundles ${{ matrix.bundles }}
 

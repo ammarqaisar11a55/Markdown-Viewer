@@ -61,7 +61,6 @@
     ],
     "linux": {
       "deb": {
-        "depends": ["libwebkit2gtk-4.1-0", "libgtk-3-0"],
         "section": "text",
         "priority": "optional",
         "desktopTemplate": "linux/markdown-viewer.desktop"

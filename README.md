@@ -129,6 +129,8 @@ sudo apt update
 sudo apt install pkg-config libwebkit2gtk-4.1-dev libgtk-3-dev \
   libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev \
   build-essential file
+# Only needed to build the AppImage (it bundles GStreamer for WebKit media):
+sudo apt install patchelf gstreamer1.0-plugins-base gstreamer1.0-plugins-good
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 

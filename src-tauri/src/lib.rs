@@ -38,6 +38,7 @@ fn log_plugin<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    use_launch_directory();
     let result = tauri::Builder::default()
         // Must be registered first so a second instance exits before doing any work.
         .plugin(tauri_plugin_single_instance::init(startup::on_second_instance))
@@ -76,5 +77,21 @@ pub fn run() {
         log::error!("application error: {err}");
         eprintln!("Markdown Viewer failed to start: {err}");
         std::process::exit(1);
+    }
+}
+
+/// Restores the directory the user launched from (see [`mdv_core::cli::launch_directory`]),
+/// so relative paths work for this process and for arguments forwarded by a second instance.
+fn use_launch_directory() {
+    let current = std::env::current_dir().ok();
+    let wanted = mdv_core::cli::launch_directory(
+        current.clone(),
+        std::env::var_os("APPIMAGE"),
+        std::env::var_os("OWD"),
+    );
+    if let Some(dir) = wanted.filter(|dir| Some(dir) != current.as_ref()) {
+        if let Err(err) = std::env::set_current_dir(&dir) {
+            log::warn!("cannot switch to the launch directory: {err}");
+        }
     }
 }

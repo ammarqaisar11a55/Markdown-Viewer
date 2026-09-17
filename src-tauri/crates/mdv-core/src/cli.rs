@@ -3,6 +3,21 @@
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 
+/// The directory the user launched the app from.
+///
+/// An AppImage runs its binary from the image's mount point and exports the
+/// caller's directory as `OWD`; prefer it so relative arguments keep working.
+pub fn launch_directory(
+    current: Option<PathBuf>,
+    appimage: Option<OsString>,
+    owd: Option<OsString>,
+) -> Option<PathBuf> {
+    match (appimage, owd) {
+        (Some(_), Some(owd)) if Path::new(&owd).is_absolute() => Some(PathBuf::from(owd)),
+        _ => current,
+    }
+}
+
 /// Extracts the files and folders to open from command-line arguments.
 ///
 /// `args` must not include the program name. Flags (arguments starting with
@@ -45,6 +60,17 @@ mod tests {
     use std::fs;
 
     use super::*;
+
+    #[test]
+    fn appimage_uses_original_working_directory() {
+        let current = Some(PathBuf::from("/tmp/.mount_app/usr"));
+        let owd = std::env::temp_dir();
+        let image = || Some(OsString::from("app.AppImage"));
+        assert_eq!(launch_directory(current.clone(), image(), Some(owd.clone().into())), Some(owd.clone()));
+        assert_eq!(launch_directory(current.clone(), None, Some(owd.into())), current);
+        assert_eq!(launch_directory(current.clone(), image(), Some("relative".into())), current);
+        assert_eq!(launch_directory(None, image(), None), None);
+    }
 
     #[test]
     fn keeps_existing_files_and_folders() {

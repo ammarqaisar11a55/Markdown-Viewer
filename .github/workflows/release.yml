@@ -3,9 +3,18 @@ name: Release
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to build and attach release assets to'
+        required: true
+        default: v1.0.0
 
 permissions:
   contents: write
+
+env:
+  TAG: ${{ inputs.tag || github.ref_name }}
 
 jobs:
   build:
@@ -21,6 +30,8 @@ jobs:
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
 
       - name: Install system dependencies (Linux)
         if: runner.os == 'Linux'
@@ -49,8 +60,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: Markdown Viewer ${{ github.ref_name }}
+          tagName: ${{ env.TAG }}
+          releaseName: Markdown Viewer ${{ env.TAG }}
+          # Hyphenated, space-free asset names.
+          assetNamePattern: Markdown-Viewer_[version]_[platform]_[arch][setup][ext]
           releaseBody: See CHANGELOG.md for the changes in this release.
           releaseDraft: false
           prerelease: false
@@ -60,7 +73,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $version = "${{ github.ref_name }}".TrimStart('v')
+          $version = "${{ env.TAG }}".TrimStart('v')
           $name = "Markdown-Viewer_${version}_x64_portable.zip"
           Compress-Archive -Path src-tauri/target/release/markdown-viewer.exe, LICENSE -DestinationPath $name
           "PORTABLE_ZIP=$name" | Out-File -FilePath $env:GITHUB_ENV -Append

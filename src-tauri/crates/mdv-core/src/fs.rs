@@ -1,8 +1,12 @@
-//! Read-only filesystem access used by the viewer.
+//! Filesystem access used by the viewer: reading documents, listing folders and
+//! the single, narrow write path used when the editor saves.
 
 use std::cmp::Ordering;
+use std::ffi::{OsStr, OsString};
 use std::fs;
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering as AtomicOrdering};
 use std::time::UNIX_EPOCH;
 
 use serde::Serialize;
@@ -10,7 +14,7 @@ use serde::Serialize;
 use crate::FsError;
 
 /// File extensions treated as Markdown (compared case-insensitively).
-pub const MARKDOWN_EXTENSIONS: &[&str] = &["md", "markdown", "mdown", "mkd"];
+pub const MARKDOWN_EXTENSIONS: &[&str] = &["md", "markdown", "mdown", "mkd", "mdx"];
 
 /// Documents larger than this are refused instead of risking the webview.
 pub const MAX_DOCUMENT_BYTES: u64 = 64 * 1024 * 1024;
@@ -92,6 +96,108 @@ pub fn read_markdown_file(path: &Path) -> Result<LoadedFile, FsError> {
     };
     Ok(LoadedFile { metadata, content, lossy })
 }
+
+/// Writes `content` to the Markdown file at `path`, returning its new metadata.
+///
+/// This is the only write path in the application, so it is deliberately
+/// narrow. A document can never cause a write anywhere else:
+///
+/// * the extension must be a Markdown one and the path must already exist as a
+///   file, so no new file is ever created and nothing but a Markdown file is
+///   ever replaced. Callers pass a canonical path (see
+///   [`crate::document::save_document`]), which resolves symlinks *before*
+///   these checks run, so a `link.md` pointing at a shell profile is refused by
+///   the extension check instead of being followed;
+/// * the content is capped exactly like reads are, so an editor cannot be used
+///   to fill the disk.
+///
+/// The data is written to a temporary file in the same directory, flushed to
+/// disk and only then renamed over the original, so a failing or interrupted
+/// write leaves the previous version intact rather than a truncated file. The
+/// temporary file is removed on every failure path. When the temporary file
+/// cannot be created or the rename is refused — a read-only directory, a hard
+/// link, Windows, an exotic filesystem — the content is written in place
+/// instead; errors while writing the temporary file are *not* retried that way,
+/// because truncating the original after a failed write is how documents get
+/// lost.
+pub fn write_markdown_file(path: &Path, content: &str) -> Result<FileMetadata, FsError> {
+    if !is_markdown_path(path) {
+        return Err(FsError::UnsupportedType);
+    }
+    let existing = fs::metadata(path)?;
+    if !existing.is_file() {
+        return Err(FsError::NotAFile);
+    }
+    let size = u64::try_from(content.len()).unwrap_or(u64::MAX);
+    if size > MAX_DOCUMENT_BYTES {
+        return Err(FsError::TooLarge { size, limit: MAX_DOCUMENT_BYTES });
+    }
+    // Fail before touching anything when the file itself is not writable: a
+    // rename into its place would otherwise happily replace a read-only file.
+    drop(fs::OpenOptions::new().write(true).open(path)?);
+
+    if let Replacement::Unavailable = replace_via_rename(path, content, &existing)? {
+        fs::write(path, content)?;
+    }
+    Ok(metadata_for(path, &fs::metadata(path)?))
+}
+
+/// Whether the temp-file-and-rename strategy could be used.
+enum Replacement {
+    Replaced,
+    Unavailable,
+}
+
+fn replace_via_rename(path: &Path, content: &str, existing: &fs::Metadata) -> Result<Replacement, FsError> {
+    let Some(dir) = path.parent() else { return Ok(Replacement::Unavailable) };
+    let Some(name) = path.file_name() else { return Ok(Replacement::Unavailable) };
+    let Some((temp, mut file)) = create_temp_file(dir, name) else {
+        return Ok(Replacement::Unavailable);
+    };
+    let written = file.write_all(content.as_bytes()).and_then(|()| file.sync_all());
+    drop(file);
+    if let Err(err) = written {
+        let _ = fs::remove_file(&temp);
+        return Err(FsError::from(err));
+    }
+    preserve_permissions(&temp, existing);
+    if fs::rename(&temp, path).is_err() {
+        let _ = fs::remove_file(&temp);
+        return Ok(Replacement::Unavailable);
+    }
+    Ok(Replacement::Replaced)
+}
+
+/// Creates a new hidden temporary file next to the document being saved.
+fn create_temp_file(dir: &Path, name: &OsStr) -> Option<(PathBuf, fs::File)> {
+    /// Distinguishes concurrent saves within this process.
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
+    const ATTEMPTS: u32 = 8;
+
+    for _ in 0..ATTEMPTS {
+        let counter = COUNTER.fetch_add(1, AtomicOrdering::Relaxed);
+        let mut temp_name = OsString::from(".");
+        temp_name.push(name);
+        temp_name.push(format!(".{}-{counter}.tmp", std::process::id()));
+        let temp = dir.join(temp_name);
+        match fs::OpenOptions::new().write(true).create_new(true).open(&temp) {
+            Ok(file) => return Some((temp, file)),
+            Err(err) if err.kind() == io::ErrorKind::AlreadyExists => continue,
+            Err(_) => return None,
+        }
+    }
+    None
+}
+
+#[cfg(unix)]
+fn preserve_permissions(temp: &Path, existing: &fs::Metadata) {
+    // The temporary file was created with the process default mode; the saved
+    // document should keep the mode it had.
+    let _ = fs::set_permissions(temp, existing.permissions());
+}
+
+#[cfg(not(unix))]
+fn preserve_permissions(_temp: &Path, _existing: &fs::Metadata) {}
 
 /// Returns, for every path, whether it is an existing file.
 pub fn files_exist(paths: &[PathBuf]) -> Vec<bool> {
@@ -289,10 +395,10 @@ mod tests {
 
     #[test]
     fn detects_markdown_extensions() {
-        for name in ["a.md", "b.MARKDOWN", "c.mdown", "d.mkd", "e.Md"] {
+        for name in ["a.md", "b.MARKDOWN", "c.mdown", "d.mkd", "e.Md", "f.mdx", "g.MDX"] {
             assert!(is_markdown_path(Path::new(name)), "{name}");
         }
-        for name in ["a.txt", "md", "a.md.bak", "a.mdx"] {
+        for name in ["a.txt", "md", "a.md.bak", "a.mdxx"] {
             assert!(!is_markdown_path(Path::new(name)), "{name}");
         }
     }
@@ -373,6 +479,103 @@ mod tests {
         fs::remove_file(&path).unwrap();
         assert_eq!(markdown_file_metadata(&path).unwrap_err(), FsError::NotFound);
         assert_eq!(files_exist(&[path, dir.path().to_path_buf()]), [false, false]);
+    }
+
+    // --- Writing --------------------------------------------------------------
+
+    #[test]
+    fn writes_and_reads_back_content() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("notes.md");
+        write(&path, "# Old\n");
+
+        let meta = write_markdown_file(&path, "# New\n\nLonger body.\n").unwrap();
+        assert_eq!(meta.name, "notes.md");
+        assert_eq!(meta.size, 20);
+        assert!(meta.modified_ms.is_some());
+        assert_eq!(read_markdown_file(&path).unwrap().content, "# New\n\nLonger body.\n");
+
+        // Overwriting again shrinks the file instead of leaving a tail behind.
+        write_markdown_file(&path, "x").unwrap();
+        assert_eq!(read_markdown_file(&path).unwrap().content, "x");
+
+        // No temporary file is left next to the document.
+        let left: Vec<_> = fs::read_dir(dir.path()).unwrap().flatten().map(|e| e.file_name()).collect();
+        assert_eq!(left, [std::ffi::OsString::from("notes.md")]);
+    }
+
+    #[test]
+    fn writes_mdx_and_unicode() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("doc.mdx");
+        write(&path, "");
+        write_markdown_file(&path, "# Grüße 🎉\n").unwrap();
+        let file = read_markdown_file(&path).unwrap();
+        assert_eq!(file.content, "# Grüße 🎉\n");
+        assert!(!file.lossy);
+    }
+
+    #[test]
+    fn write_refuses_unsupported_targets() {
+        let dir = tempfile::tempdir().unwrap();
+
+        let txt = dir.path().join("notes.txt");
+        write(&txt, "keep");
+        assert_eq!(write_markdown_file(&txt, "x").unwrap_err(), FsError::UnsupportedType);
+        assert_eq!(fs::read_to_string(&txt).unwrap(), "keep");
+
+        // Nothing is ever created: neither a new file…
+        let missing = dir.path().join("new.md");
+        assert_eq!(write_markdown_file(&missing, "x").unwrap_err(), FsError::NotFound);
+        assert!(!missing.exists());
+        // …nor a file in a directory that does not exist.
+        let nested = dir.path().join("gone/new.md");
+        assert_eq!(write_markdown_file(&nested, "x").unwrap_err(), FsError::NotFound);
+
+        let folder = dir.path().join("folder.md");
+        fs::create_dir(&folder).unwrap();
+        assert_eq!(write_markdown_file(&folder, "x").unwrap_err(), FsError::NotAFile);
+    }
+
+    #[test]
+    fn write_refuses_oversized_content() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("big.md");
+        write(&path, "small");
+        let size = usize::try_from(MAX_DOCUMENT_BYTES).unwrap() + 1;
+        let err = write_markdown_file(&path, &"a".repeat(size)).unwrap_err();
+        assert_eq!(err, FsError::TooLarge { size: MAX_DOCUMENT_BYTES + 1, limit: MAX_DOCUMENT_BYTES });
+        assert_eq!(fs::read_to_string(&path).unwrap(), "small");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn write_preserves_permissions() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("mode.md");
+        write(&path, "a");
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o640)).unwrap();
+        write_markdown_file(&path, "b").unwrap();
+        let mode = fs::metadata(&path).unwrap().permissions().mode() & 0o777;
+        assert_eq!(mode, 0o640);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn write_to_a_read_only_file_is_refused() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("locked.md");
+        write(&path, "original");
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o444)).unwrap();
+        let result = write_markdown_file(&path, "replaced");
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o644)).unwrap();
+        // Root can write anything, so only assert when the mode actually applied.
+        if let Err(err) = result {
+            assert_eq!(err, FsError::PermissionDenied);
+            assert_eq!(fs::read_to_string(&path).unwrap(), "original");
+        }
     }
 
     #[test]

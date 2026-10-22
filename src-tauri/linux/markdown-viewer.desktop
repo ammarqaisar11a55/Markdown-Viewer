@@ -12,5 +12,5 @@ StartupWMClass={{exec}}
 StartupNotify=true
 Terminal=false
 Categories={{categories}}
-MimeType=text/markdown;text/x-markdown;
-Keywords=markdown;md;reader;viewer;documentation;
+MimeType=text/markdown;text/x-markdown;text/mdx;
+Keywords=markdown;md;mdx;reader;viewer;documentation;

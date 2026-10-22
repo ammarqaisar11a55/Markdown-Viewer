@@ -12,9 +12,10 @@ import {
   resetAppState,
 } from '@/test/state';
 import { setTauriRuntime } from '@/test/tauri';
-import type { DirectoryTree, OpenedDocument } from '@/types';
+import type { DirectoryTree, DocumentSource, FsErrorKind, OpenedDocument } from '@/types';
 import {
   activateNextTab,
+  confirmQuit,
   activatePreviousTab,
   activateTab,
   closeAllTabs,
@@ -27,7 +28,12 @@ import {
   reloadDocument,
   reopenClosedTab,
   rerenderAllDocuments,
+  saveDocument,
+  setDraft,
   setTabScroll,
+  startEditing,
+  stopEditing,
+  toggleEditing,
 } from './actions';
 
 const tabs = () => useDocuments.getState().tabs;
@@ -129,7 +135,7 @@ describe('openDocument', () => {
     const backend = fileBackend({ '/d/a.md': makeDoc('/d/a.md') });
     await openDocument('/d/a.md');
     expect(backend.callsOf('watch_file').map((c) => c.args)).toEqual([{ path: '/d/a.md' }]);
-    closeTab(tabs()[0]!.id);
+    await closeTab(tabs()[0]!.id);
     expect(backend.callsOf('unwatch_file').map((c) => c.args)).toEqual([{ path: '/d/a.md' }]);
   });
 
@@ -137,7 +143,7 @@ describe('openDocument', () => {
     const pending = deferred<OpenedDocument>();
     mockBackend({ open_document: () => pending.promise });
     const promise = openDocument('/d/a.md');
-    closeTab(tabs()[0]!.id);
+    await closeTab(tabs()[0]!.id);
     pending.resolve(makeDoc('/d/a.md'));
     await promise;
     expect(tabs()).toEqual([]);
@@ -161,21 +167,21 @@ describe('tab management', () => {
   it('closing the active tab activates the neighbor', async () => {
     const [a, b, c] = await openThree();
     activateTab(b);
-    closeTab(b);
+    await closeTab(b);
     expect(useDocuments.getState().activeId).toBe(c);
-    closeTab(c);
+    await closeTab(c);
     expect(useDocuments.getState().activeId).toBe(a);
-    closeTab(a);
+    await closeTab(a);
     expect(useDocuments.getState().activeId).toBeNull();
     expect(useDocuments.getState().closedPaths).toEqual(['/b.md', '/c.md', '/a.md']);
   });
 
   it('closes other tabs and all tabs', async () => {
     const [, b] = await openThree();
-    closeOtherTabs(b);
+    await closeOtherTabs(b);
     expect(tabs().map((t) => t.id)).toEqual([b]);
     expect(useDocuments.getState().activeId).toBe(b);
-    closeAllTabs();
+    await closeAllTabs();
     expect(tabs()).toEqual([]);
     expect(useDocuments.getState().activeId).toBeNull();
     expect(useDocuments.getState().closedPaths).toEqual(['/a.md', '/c.md', '/b.md']);
@@ -183,8 +189,8 @@ describe('tab management', () => {
 
   it('reopens closed tabs most recent first', async () => {
     const [a, b] = await openThree();
-    closeTab(a);
-    closeTab(b);
+    await closeTab(a);
+    await closeTab(b);
     await reopenClosedTab();
     expect(getActiveTab()?.path).toBe('/b.md');
     await reopenClosedTab();
@@ -199,7 +205,7 @@ describe('tab management', () => {
     );
     fileBackend(files);
     await Promise.all(Object.keys(files).map((p) => openDocument(p)));
-    closeAllTabs();
+    await closeAllTabs();
     const { closedPaths } = useDocuments.getState();
     expect(closedPaths).toHaveLength(20);
     expect(closedPaths.at(-1)).toBe('/f24.md');
@@ -342,6 +348,7 @@ describe('file changes', () => {
     const notice = toasts().find((t) => t.title === 'File was deleted or moved.');
     expect(notice?.variant).toBe('warning');
     notice?.actions[0]?.onClick();
+    await flushPromises();
     expect(tabs()).toEqual([]);
     expect(toasts()).toEqual([]);
   });
@@ -369,5 +376,411 @@ describe('openPaths', () => {
         description: 'pic.png is not a Markdown file.',
       }),
     ]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Editing
+// ---------------------------------------------------------------------------
+
+interface EditBackend {
+  source: string;
+  written: string[];
+  saveError: FsErrorKind | null;
+  renderError: boolean;
+}
+
+function editBackend(initial = '# Hello\n') {
+  const state: EditBackend = {
+    source: initial,
+    written: [],
+    saveError: null,
+    renderError: false,
+  };
+  const backend = mockBackend({
+    open_document: ({ path }) => makeDoc(path as string, { html: `<p>${state.source.trim()}</p>` }),
+    read_source: ({ path }) => ({
+      path: path as string,
+      name: '/a.md',
+      size: state.source.length,
+      modifiedMs: 1,
+      content: state.source,
+      lossy: false,
+    }),
+    save_document: ({ path, content }) => {
+      if (state.saveError !== null) throwFsError(state.saveError);
+      state.source = content as string;
+      state.written.push(content as string);
+      return makeDoc(path as string, {
+        html: `<p>${state.source.trim()}</p>`,
+        modifiedMs: 2,
+        size: state.source.length,
+      });
+    },
+    render_source: ({ source }) => {
+      if (state.renderError) throwFsError('io');
+      return {
+        html: `<p>draft:${(source as string).trim()}</p>`,
+        headings: [],
+        wordCount: 2,
+        flavor: 'markdown',
+        simplified: false,
+      };
+    },
+  });
+  return { ...backend, state };
+}
+
+/** Opens `/a.md` and returns its tab id. */
+async function openForEditing(initial?: string) {
+  const backend = editBackend(initial);
+  await openDocument('/a.md');
+  return { backend, id: tabs()[0]!.id };
+}
+
+function confirmWith(answer: boolean) {
+  return vi.spyOn(window, 'confirm').mockReturnValue(answer);
+}
+
+describe('startEditing', () => {
+  it('loads the raw source and opens the editor', async () => {
+    const { backend, id } = await openForEditing('# Hello\n');
+    await startEditing(id);
+    expect(backend.callsOf('read_source').map((c) => c.args)).toEqual([{ path: '/a.md' }]);
+    expect(tabs()[0]).toMatchObject({
+      editing: true,
+      draft: '# Hello\n',
+      savedText: '# Hello\n',
+      dirty: false,
+    });
+  });
+
+  it('stays in view mode and toasts when the source cannot be read', async () => {
+    mockBackend({
+      open_document: ({ path }) => makeDoc(path as string),
+      read_source: () => throwFsError('permissionDenied'),
+    });
+    await openDocument('/a.md');
+    await startEditing(tabs()[0]!.id);
+    expect(tabs()[0]).toMatchObject({ editing: false, draft: null });
+    expect(toasts().at(-1)).toMatchObject({
+      variant: 'error',
+      title: 'Unable to edit this file.',
+    });
+  });
+
+  it('reuses a draft that was kept while reading', async () => {
+    const { backend, id } = await openForEditing();
+    await startEditing(id);
+    setDraft(id, '# Changed');
+    await stopEditing(id);
+    expect(tabs()[0]).toMatchObject({ editing: false, dirty: true, draft: '# Changed' });
+    await startEditing(id);
+    expect(tabs()[0]).toMatchObject({ editing: true, draft: '# Changed' });
+    expect(backend.callsOf('read_source')).toHaveLength(1);
+  });
+
+  it('ignores a source that arrives after the tab was closed', async () => {
+    const pending = deferred<DocumentSource>();
+    mockBackend({
+      open_document: ({ path }) => makeDoc(path as string),
+      read_source: () => pending.promise,
+    });
+    await openDocument('/a.md');
+    const id = tabs()[0]!.id;
+    const promise = startEditing(id);
+    await closeTab(id);
+    pending.resolve({
+      path: '/a.md',
+      name: 'a.md',
+      size: 1,
+      modifiedMs: 1,
+      content: 'x',
+      lossy: false,
+    });
+    await promise;
+    expect(tabs()).toEqual([]);
+  });
+});
+
+describe('setDraft', () => {
+  it('tracks dirty state against the text on disk', async () => {
+    const { id } = await openForEditing('a\n');
+    await startEditing(id);
+    setDraft(id, 'a\nb');
+    expect(tabs()[0]).toMatchObject({ draft: 'a\nb', dirty: true });
+    setDraft(id, 'a\n');
+    expect(tabs()[0]).toMatchObject({ draft: 'a\n', dirty: false });
+  });
+
+  it('does nothing without a loaded draft', async () => {
+    const { id } = await openForEditing();
+    setDraft(id, 'nope');
+    expect(tabs()[0]).toMatchObject({ draft: null, dirty: false });
+  });
+});
+
+describe('saveDocument', () => {
+  it('writes the draft, adopts the re-render and clears dirty', async () => {
+    const { backend, id } = await openForEditing('a\n');
+    await startEditing(id);
+    setDraft(id, '# New\n');
+    await saveDocument(id);
+    expect(backend.callsOf('save_document')[0]?.args).toEqual({
+      path: '/a.md',
+      content: '# New\n',
+      options: { allowHtml: true },
+    });
+    expect(tabs()[0]).toMatchObject({
+      dirty: false,
+      saving: false,
+      savedText: '# New\n',
+      editing: true,
+      revision: 2,
+    });
+    expect(tabs()[0]?.doc?.html).toBe('<p># New</p>');
+    expect(toasts()).toEqual([]);
+  });
+
+  it('is a no-op when nothing changed', async () => {
+    const { backend, id } = await openForEditing();
+    await startEditing(id);
+    await saveDocument(id);
+    expect(backend.callsOf('save_document')).toHaveLength(0);
+  });
+
+  it('reports `saving` while the write is in flight', async () => {
+    const pending = deferred<OpenedDocument>();
+    mockBackend({
+      open_document: ({ path }) => makeDoc(path as string),
+      read_source: () => ({
+        path: '/a.md',
+        name: 'a.md',
+        size: 1,
+        modifiedMs: 1,
+        content: 'a',
+        lossy: false,
+      }),
+      save_document: () => pending.promise,
+    });
+    await openDocument('/a.md');
+    const id = tabs()[0]!.id;
+    await startEditing(id);
+    setDraft(id, 'b');
+    const promise = saveDocument(id);
+    expect(tabs()[0]?.saving).toBe(true);
+    pending.resolve(makeDoc('/a.md'));
+    await promise;
+    expect(tabs()[0]?.saving).toBe(false);
+  });
+
+  it('keeps the draft and toasts when the write fails', async () => {
+    const { backend, id } = await openForEditing('a\n');
+    await startEditing(id);
+    setDraft(id, 'b\n');
+    backend.state.saveError = 'permissionDenied';
+    await saveDocument(id);
+    expect(tabs()[0]).toMatchObject({ draft: 'b\n', dirty: true, saving: false, editing: true });
+    expect(toasts().at(-1)).toMatchObject({
+      variant: 'error',
+      title: 'Unable to save this file.',
+      description: 'You don’t have permission to write to it.',
+    });
+  });
+
+  it('stays dirty when the user typed on while saving', async () => {
+    const pending = deferred<OpenedDocument>();
+    mockBackend({
+      open_document: ({ path }) => makeDoc(path as string),
+      read_source: () => ({
+        path: '/a.md',
+        name: 'a.md',
+        size: 1,
+        modifiedMs: 1,
+        content: 'a',
+        lossy: false,
+      }),
+      save_document: () => pending.promise,
+    });
+    await openDocument('/a.md');
+    const id = tabs()[0]!.id;
+    await startEditing(id);
+    setDraft(id, 'b');
+    const promise = saveDocument(id);
+    setDraft(id, 'bc');
+    pending.resolve(makeDoc('/a.md'));
+    await promise;
+    expect(tabs()[0]).toMatchObject({ dirty: true, savedText: 'b', draft: 'bc' });
+  });
+});
+
+describe('stopEditing / toggleEditing', () => {
+  it('previews the draft when going back to reading', async () => {
+    const { backend, id } = await openForEditing('a\n');
+    await startEditing(id);
+    setDraft(id, 'draft text');
+    await stopEditing(id);
+    expect(backend.callsOf('render_source')[0]?.args).toEqual({
+      path: '/a.md',
+      source: 'draft text',
+      options: { allowHtml: true },
+    });
+    expect(tabs()[0]).toMatchObject({ editing: false, dirty: true, revision: 2 });
+    expect(tabs()[0]?.doc?.html).toBe('<p>draft:draft text</p>');
+  });
+
+  it('falls back to the saved render when previewing fails', async () => {
+    const { backend, id } = await openForEditing('a\n');
+    await startEditing(id);
+    setDraft(id, 'draft text');
+    backend.state.renderError = true;
+    await stopEditing(id);
+    expect(tabs()[0]).toMatchObject({ editing: false, dirty: true, revision: 1 });
+    expect(tabs()[0]?.doc?.html).toBe('<p>a</p>');
+  });
+
+  it('asks before discarding and keeps the draft when declined', async () => {
+    const { id } = await openForEditing('a\n');
+    await startEditing(id);
+    setDraft(id, 'b');
+    const confirmSpy = confirmWith(false);
+    await stopEditing(id, { discard: true });
+    expect(confirmSpy).toHaveBeenCalledWith(expect.stringContaining('unsaved changes'));
+    expect(tabs()[0]).toMatchObject({ editing: true, dirty: true, draft: 'b' });
+
+    confirmSpy.mockReturnValue(true);
+    await stopEditing(id, { discard: true });
+    expect(tabs()[0]).toMatchObject({ editing: false, dirty: false, draft: null, savedText: null });
+  });
+
+  it('discards without asking when there are no changes', async () => {
+    const { id } = await openForEditing();
+    await startEditing(id);
+    const confirmSpy = confirmWith(true);
+    await toggleEditing(id);
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(tabs()[0]).toMatchObject({ editing: false });
+    await toggleEditing(id);
+    expect(tabs()[0]).toMatchObject({ editing: true });
+  });
+});
+
+describe('unsaved-change guards', () => {
+  async function dirtyTab(text = 'changed') {
+    const result = await openForEditing('a\n');
+    await startEditing(result.id);
+    setDraft(result.id, text);
+    return result;
+  }
+
+  it('asks before closing a dirty tab', async () => {
+    const { id } = await dirtyTab();
+    const confirmSpy = confirmWith(false);
+    await closeTab(id);
+    expect(tabs()).toHaveLength(1);
+    confirmSpy.mockReturnValue(true);
+    await closeTab(id);
+    expect(tabs()).toEqual([]);
+  });
+
+  it('asks before quitting with unsaved changes', async () => {
+    const { id } = await dirtyTab();
+    const confirmSpy = confirmWith(false);
+    expect(await confirmQuit()).toBe(false);
+    expect(confirmSpy).toHaveBeenCalledWith(expect.stringContaining('a.md'));
+    expect(tabs()[0]).toMatchObject({ dirty: true });
+
+    confirmSpy.mockReturnValue(true);
+    expect(await confirmQuit()).toBe(true);
+    // Quitting is allowed but nothing is closed here: the window does that.
+    expect(tabs()).toHaveLength(1);
+
+    await stopEditing(id, { discard: true });
+    expect(await confirmQuit()).toBe(true);
+  });
+
+  it('asks once, listing the dirty files, when closing several tabs', async () => {
+    const backend = editBackend('a\n');
+    await openDocument('/a.md', { newTab: true });
+    await openDocument('/b.md', { newTab: true });
+    for (const tab of tabs()) {
+      await startEditing(tab.id);
+      setDraft(tab.id, 'changed');
+    }
+    expect(backend.callsOf('read_source')).toHaveLength(2);
+    const confirmSpy = confirmWith(true);
+    await closeAllTabs();
+    expect(confirmSpy).toHaveBeenCalledTimes(1);
+    expect(confirmSpy).toHaveBeenCalledWith(expect.stringContaining('2 files'));
+    expect(tabs()).toEqual([]);
+  });
+
+  it('asks before closing the other tabs', async () => {
+    editBackend('a\n');
+    await openDocument('/a.md', { newTab: true });
+    await openDocument('/b.md', { newTab: true });
+    const [first, second] = tabs();
+    await startEditing(second!.id);
+    setDraft(second!.id, 'changed');
+    const confirmSpy = confirmWith(false);
+    await closeOtherTabs(first!.id);
+    expect(tabs()).toHaveLength(2);
+    expect(confirmSpy).toHaveBeenCalledOnce();
+  });
+
+  it('asks before reloading a dirty tab and restores the editor afterwards', async () => {
+    const { backend, id } = await dirtyTab();
+    const confirmSpy = confirmWith(false);
+    await reloadDocument(id);
+    expect(tabs()[0]).toMatchObject({ dirty: true, draft: 'changed', revision: 1 });
+
+    confirmSpy.mockReturnValue(true);
+    backend.state.source = '# From disk\n';
+    await reloadDocument(id);
+    expect(tabs()[0]).toMatchObject({
+      dirty: false,
+      editing: true,
+      draft: '# From disk\n',
+      revision: 2,
+    });
+  });
+
+  it('never replaces a dirty tab when openInNewTab is off', async () => {
+    editBackend('a\n');
+    updateSettings({ openInNewTab: false });
+    await openDocument('/a.md');
+    const id = tabs()[0]!.id;
+    await startEditing(id);
+    setDraft(id, 'changed');
+    await openDocument('/b.md');
+    expect(tabs().map((t) => t.path)).toEqual(['/a.md', '/b.md']);
+  });
+
+  it('warns instead of auto-reloading when the file changes while editing', async () => {
+    updateSettings({ autoReload: true });
+    const { backend } = await dirtyTab();
+    await handleFileChanged({ path: '/a.md', kind: 'modified', modifiedMs: 5 });
+    expect(tabs()[0]).toMatchObject({ dirty: true, draft: 'changed', externalChange: 'modified' });
+    expect(backend.callsOf('open_document')).toHaveLength(1);
+    const notice = toasts().at(-1);
+    expect(notice).toMatchObject({
+      variant: 'warning',
+      title: 'File changed on disk while you were editing.',
+    });
+    expect(notice?.actions.map((a) => a.label)).toEqual(['Keep Editing', 'Reload']);
+  });
+
+  it('re-renders a dirty tab from its draft instead of reloading it', async () => {
+    const { backend, id } = await dirtyTab('draft text');
+    await stopEditing(id);
+    updateSettings({ renderHtml: false });
+    await rerenderAllDocuments();
+    expect(backend.callsOf('open_document')).toHaveLength(1);
+    expect(backend.callsOf('render_source').at(-1)?.args).toEqual({
+      path: '/a.md',
+      source: 'draft text',
+      options: { allowHtml: false },
+    });
+    expect(tabs()[0]).toMatchObject({ dirty: true, draft: 'draft text' });
   });
 });

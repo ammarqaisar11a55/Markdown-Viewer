@@ -12,18 +12,23 @@ function shortcutOf(id: Parameters<typeof getShortcutLabel>[0]): Shortcut {
 
 export function tabMenuItems(tabId: string, path: string, tabCount: number): ContextMenuItem[] {
   return [
-    { id: 'close', label: 'Close', ...shortcutOf('tab.close'), onSelect: () => closeTab(tabId) },
+    {
+      id: 'close',
+      label: 'Close',
+      ...shortcutOf('tab.close'),
+      onSelect: () => void closeTab(tabId),
+    },
     {
       id: 'close-others',
       label: 'Close Others',
       disabled: tabCount < 2,
-      onSelect: () => closeOtherTabs(tabId),
+      onSelect: () => void closeOtherTabs(tabId),
     },
     {
       id: 'close-all',
       label: 'Close All',
       ...shortcutOf('tab.closeAll'),
-      onSelect: closeAllTabs,
+      onSelect: () => void closeAllTabs(),
     },
     { type: 'separator' },
     { id: 'copy-path', label: 'Copy File Path', onSelect: () => copyPathAction(path) },

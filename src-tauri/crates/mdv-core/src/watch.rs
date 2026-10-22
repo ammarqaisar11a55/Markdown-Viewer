@@ -104,6 +104,16 @@ impl WatchRegistry {
         Some(dir)
     }
 
+    /// Re-reads the stored state of `file` without reporting a change.
+    ///
+    /// Called right after the app writes a document itself, so its own save is
+    /// not mistaken for an edit made in another program.
+    pub fn refresh(&mut self, file: &Path) {
+        if let Some(entry) = self.files.get_mut(file) {
+            entry.signature = Signature::read(file);
+        }
+    }
+
     pub fn is_watched(&self, file: &Path) -> bool {
         self.files.contains_key(file)
     }
@@ -239,6 +249,34 @@ mod tests {
         let changes = registry.process([tmp.as_path(), doc.as_path()]);
         assert_eq!(changes.len(), 1);
         assert_eq!(changes[0].kind, ChangeKind::Modified);
+    }
+
+    #[test]
+    fn refreshing_hides_our_own_write() {
+        let dir = tempfile::tempdir().unwrap();
+        let doc = dir.path().join("doc.md");
+        let other = dir.path().join("other.md");
+        touch(&doc, "one", 0);
+        let mut registry = WatchRegistry::new();
+        registry.add(&doc).unwrap();
+
+        touch(&doc, "saved by us", 5);
+        registry.refresh(&doc);
+        assert!(registry.process([doc.as_path()]).is_empty());
+
+        // A later change from somewhere else is still reported.
+        touch(&doc, "edited elsewhere", 10);
+        assert_eq!(registry.process([doc.as_path()]).len(), 1);
+
+        // Unknown and unwatched paths are ignored.
+        registry.refresh(&other);
+        registry.refresh(Path::new("/nonexistent/doc.md"));
+        assert!(registry.process([doc.as_path(), other.as_path()]).is_empty());
+
+        // Refreshing a document that vanished reports nothing afterwards either.
+        fs::remove_file(&doc).unwrap();
+        registry.refresh(&doc);
+        assert!(registry.process([doc.as_path()]).is_empty());
     }
 
     #[test]

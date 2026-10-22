@@ -1,10 +1,10 @@
 //! IPC commands. Filesystem work runs on the blocking thread pool so the main
 //! thread (and therefore the UI) never waits on disk I/O.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
-use mdv_core::fs::{files_exist, scan_directory, DirectoryTree, ScanOptions};
-use mdv_core::{FsError, OpenedDocument, RenderOptions};
+use mdv_core::fs::{files_exist, read_markdown_file, scan_directory, DirectoryTree, LoadedFile, ScanOptions};
+use mdv_core::{FsError, OpenedDocument, RenderOptions, RenderedSource};
 use tauri::{AppHandle, Manager, Runtime, State};
 
 use crate::startup::StartupPaths;
@@ -34,6 +34,50 @@ pub async fn open_document(path: String, options: RenderOptions) -> Result<Opene
     let target = PathBuf::from(&path);
     let result = blocking(move || mdv_core::open_document(&target, &options)).await;
     log_failure("open", &path, result)
+}
+
+/// Reads the raw text of a document, for editing rather than rendering.
+#[tauri::command]
+pub async fn read_source(path: String) -> Result<LoadedFile, FsError> {
+    let target = PathBuf::from(&path);
+    let result = blocking(move || {
+        let canonical = mdv_core::document::canonicalize(&target)?;
+        read_markdown_file(&canonical)
+    })
+    .await;
+    log_failure("read", &path, result)
+}
+
+/// Renders unsaved editor text; nothing is read from or written to disk.
+#[tauri::command]
+pub async fn render_source(
+    path: String,
+    source: String,
+    options: RenderOptions,
+) -> Result<RenderedSource, FsError> {
+    let target = PathBuf::from(&path);
+    let result = blocking(move || Ok(mdv_core::render_source(&target, &source, &options))).await;
+    log_failure("render", &path, result)
+}
+
+/// Writes the document back to disk and returns it re-rendered.
+#[tauri::command]
+pub async fn save_document(
+    watcher: State<'_, FileWatcher>,
+    path: String,
+    content: String,
+    options: RenderOptions,
+) -> Result<OpenedDocument, FsError> {
+    let watcher = watcher.inner().clone();
+    let target = PathBuf::from(&path);
+    let result = blocking(move || {
+        let document = mdv_core::save_document(&target, &content, &options)?;
+        // Our own write must not come back as a `file-changed` event.
+        watcher.refresh(Path::new(&document.path));
+        Ok(document)
+    })
+    .await;
+    log_failure("save", &path, result)
 }
 
 #[tauri::command]

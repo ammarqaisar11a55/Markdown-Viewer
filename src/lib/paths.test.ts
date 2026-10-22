@@ -60,10 +60,12 @@ describe('isAbsolutePath / isMarkdownPath / samePath', () => {
   });
 
   it('recognizes markdown extensions case-insensitively', () => {
-    for (const name of ['a.md', 'b.MARKDOWN', 'c.mdown', 'd.Mkd']) {
+    for (const name of ['a.md', 'b.MARKDOWN', 'c.mdown', 'd.Mkd', 'e.mdx', 'f.MDX']) {
       expect(isMarkdownPath(name)).toBe(true);
     }
+    expect(isMarkdownPath('/docs/guide.mdx')).toBe(true);
     expect(isMarkdownPath('notes.txt')).toBe(false);
+    expect(isMarkdownPath('component.jsx')).toBe(false);
     expect(isMarkdownPath('.md')).toBe(false);
   });
 

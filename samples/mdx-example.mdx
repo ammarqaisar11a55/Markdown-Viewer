@@ -1,0 +1,64 @@
+---
+title: MDX example
+description: Shows how Markdown Viewer renders an .mdx file
+---
+
+import { Callout } from '../components/Callout'
+import Chart from './Chart'
+
+export const meta = {
+  audience: 'documentation authors',
+}
+
+# MDX example
+
+Markdown Viewer opens `.mdx` files and renders the Markdown inside them. MDX is
+Markdown plus JSX, and this application is a reader with no JavaScript runtime
+for your components — so the component machinery is removed before rendering and
+everything that is plain Markdown is shown normally.
+
+{/* JSX comments like this one are removed. */}
+
+## What renders normally
+
+Everything from regular Markdown works unchanged:
+
+- **Bold**, *italic*, ~~strikethrough~~ and `inline code`
+- [Links](https://example.com) and images
+- Tables, task lists and footnotes
+
+| Syntax            | Rendered | Notes                                   |
+| :---------------- | :------: | :-------------------------------------- |
+| Markdown          | Yes      | Identical to `.md`                      |
+| JSX components    | Partly   | Tags removed, inner Markdown kept       |
+| `import`/`export` | No       | Removed before rendering                |
+
+```tsx
+// Code blocks are never touched, even when they contain JSX or imports.
+import { useState } from 'react';
+
+export function Counter() {
+  const [count, setCount] = useState(0);
+  return <button onClick={() => setCount(count + 1)}>{count}</button>;
+}
+```
+
+## What changes
+
+<Callout type="warning">
+  The component wrapper around this paragraph is removed, but **the Markdown
+  inside it is still rendered**.
+</Callout>
+
+A self-closing component such as <Chart data={meta} /> disappears entirely,
+because there is nothing inside it to show.
+
+An expression in a sentence, like the value {meta.audience}, is left as written
+rather than evaluated.
+
+## Why it works this way
+
+Rendering MDX properly means evaluating JavaScript from the document. This
+application deliberately never executes anything a document contains, so it
+shows the readable parts and leaves the rest out. When a file is simplified this
+way, the viewer says so at the top of the document.

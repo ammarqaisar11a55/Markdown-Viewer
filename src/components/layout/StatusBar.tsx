@@ -11,7 +11,7 @@ import { toast } from '@/stores/toastStore';
 import { useUi } from '@/stores/uiStore';
 import { IconButton } from '@/components/ui/IconButton';
 import { Tooltip } from '@/components/ui/Tooltip';
-import { formatReadingTime, formatWordCount, formatZoom } from './format';
+import { formatEditingState, formatReadingTime, formatWordCount, formatZoom } from './format';
 
 const itemClass =
   'flex h-full items-center rounded-sm px-1.5 transition-colors duration-100 hover:bg-bg-muted hover:text-fg';
@@ -29,6 +29,9 @@ async function copyPath(path: string): Promise<void> {
 export const StatusBar = memo(function StatusBar() {
   const path = useDocuments((s) => selectActiveTab(s)?.path ?? null);
   const wordCount = useDocuments((s) => selectActiveTab(s)?.doc?.wordCount ?? null);
+  const editing = useDocuments((s) => selectActiveTab(s)?.editing ?? false);
+  const dirty = useDocuments((s) => selectActiveTab(s)?.dirty ?? false);
+  const saving = useDocuments((s) => selectActiveTab(s)?.saving ?? false);
   const zoom = useUi((s) => s.zoom);
   const resetZoom = useUi((s) => s.resetZoom);
   const theme = useResolvedTheme();
@@ -52,11 +55,15 @@ export const StatusBar = memo(function StatusBar() {
         )}
       </div>
       <div className="tabular flex h-full shrink-0 items-center gap-1 py-0.5">
-        {wordCount !== null && (
-          <>
-            <span className="px-1.5">{formatWordCount(wordCount)}</span>
-            <span className="px-1.5">{formatReadingTime(wordCount)}</span>
-          </>
+        {editing ? (
+          <span className="px-1.5">{formatEditingState(saving, dirty)}</span>
+        ) : (
+          wordCount !== null && (
+            <>
+              <span className="px-1.5">{formatWordCount(wordCount)}</span>
+              <span className="px-1.5">{formatReadingTime(wordCount)}</span>
+            </>
+          )
         )}
         <Tooltip label="Reset zoom" shortcut={getShortcutLabel('view.zoomReset')} side="top">
           <button

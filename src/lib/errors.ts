@@ -1,7 +1,7 @@
 // Maps technical failures to friendly, user-facing messages.
 import type { AppError, AppErrorKind, FsErrorKind, FsErrorPayload } from '@/types';
 
-export type ErrorContext = 'file' | 'folder';
+export type ErrorContext = 'file' | 'folder' | 'save';
 
 const FS_KINDS: readonly FsErrorKind[] = [
   'notFound',
@@ -34,7 +34,7 @@ const FILE_COPY: Copy = {
   },
   unsupportedType: {
     title: 'This file type isn’t supported.',
-    description: 'Markdown Viewer opens .md, .markdown, .mdown and .mkd files.',
+    description: 'Markdown Viewer opens .md, .markdown, .mdown, .mkd and .mdx files.',
   },
   tooLarge: {
     title: 'This file is too large to open.',
@@ -47,6 +47,41 @@ const FILE_COPY: Copy = {
   unknown: {
     title: 'Something went wrong.',
     description: 'The file could not be opened. Please try again.',
+  },
+};
+
+const SAVE_COPY: Copy = {
+  notFound: {
+    title: 'Unable to save this file.',
+    description: 'The file or its folder may have been moved or deleted.',
+  },
+  permissionDenied: {
+    title: 'Unable to save this file.',
+    description: 'You don’t have permission to write to it.',
+  },
+  notAFile: {
+    title: 'Unable to save this file.',
+    description: 'The target is not a regular file.',
+  },
+  notADirectory: {
+    title: 'Unable to save this file.',
+    description: 'Part of the path is not a folder.',
+  },
+  unsupportedType: {
+    title: 'Unable to save this file.',
+    description: 'Only Markdown files can be saved.',
+  },
+  tooLarge: {
+    title: 'This document is too large to save.',
+    description: 'Try splitting it into smaller files.',
+  },
+  io: {
+    title: 'Unable to save this file.',
+    description: 'Something went wrong while writing it. Your changes are still here.',
+  },
+  unknown: {
+    title: 'Unable to save this file.',
+    description: 'Your changes are still here. Please try again.',
   },
 };
 
@@ -106,6 +141,12 @@ function technicalDetail(err: unknown): string {
   }
 }
 
+const CONTEXT_COPY: Record<ErrorContext, Copy> = {
+  file: FILE_COPY,
+  folder: FOLDER_COPY,
+  save: SAVE_COPY,
+};
+
 export function isAppError(value: unknown): value is AppError {
   if (typeof value !== 'object' || value === null) return false;
   const record = value as Record<string, unknown>;
@@ -119,7 +160,7 @@ export function isAppError(value: unknown): value is AppError {
 
 export function toAppError(err: unknown, context: ErrorContext = 'file'): AppError {
   if (isAppError(err)) return err;
-  const copy = context === 'folder' ? FOLDER_COPY : FILE_COPY;
+  const copy = CONTEXT_COPY[context];
   if (isFsErrorPayload(err)) {
     return { kind: err.kind, ...copy[err.kind], technical: err.message };
   }

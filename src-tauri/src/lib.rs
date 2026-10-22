@@ -64,6 +64,9 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::open_document,
+            commands::read_source,
+            commands::render_source,
+            commands::save_document,
             commands::scan_folder,
             commands::check_files,
             commands::watch_file,

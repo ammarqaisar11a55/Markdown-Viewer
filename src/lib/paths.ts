@@ -2,7 +2,7 @@
 // (`C:\Users\a\b.md`, `\\server\share\b.md`) paths. The frontend has no fs
 // access, so everything here is string manipulation only.
 
-const MARKDOWN_EXTENSIONS = new Set(['md', 'markdown', 'mdown', 'mkd']);
+const MARKDOWN_EXTENSIONS = new Set(['md', 'markdown', 'mdown', 'mkd', 'mdx']);
 const DRIVE_RE = /^[a-zA-Z]:(?:[\\/]|$)/;
 const UNC_RE = /^[\\/]{2}[^\\/]/;
 

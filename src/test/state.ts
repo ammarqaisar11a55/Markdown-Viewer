@@ -47,9 +47,20 @@ export function makeDoc(path: string, overrides: Partial<OpenedDocument> = {}): 
     headings: [],
     wordCount: 1,
     lossy: false,
+    flavor: 'markdown',
+    simplified: false,
     ...overrides,
   };
 }
+
+/** Editing fields of a tab that has no draft. */
+export const NOT_EDITING = {
+  editing: false,
+  draft: null,
+  savedText: null,
+  dirty: false,
+  saving: false,
+} as const;
 
 /** Throws the plain `FsErrorPayload` object that Rust commands reject with. */
 export function throwFsError(kind: FsErrorPayload['kind'], message = 'os error'): never {

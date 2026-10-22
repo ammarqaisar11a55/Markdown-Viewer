@@ -43,6 +43,8 @@ function makeDoc(overrides: Partial<OpenedDocument> = {}): OpenedDocument {
     ],
     wordCount: 10,
     lossy: false,
+    flavor: 'markdown',
+    simplified: false,
     ...overrides,
   };
 }
@@ -59,6 +61,11 @@ function makeTab(overrides: Partial<DocumentTab> = {}): DocumentTab {
     scrollTop: 0,
     externalChange: null,
     revision: 1,
+    editing: false,
+    draft: null,
+    savedText: null,
+    dirty: false,
+    saving: false,
     ...overrides,
   };
 }
@@ -106,6 +113,20 @@ describe('MarkdownView', () => {
   it('shows a banner for lossy documents', () => {
     render(<MarkdownView tab={makeTab({ doc: makeDoc({ lossy: true }) })} />);
     expect(screen.getByRole('note')).toHaveTextContent('could not be decoded');
+  });
+
+  it('explains what was left out of a simplified MDX document', () => {
+    const doc = makeDoc({ path: '/home/u/docs/guide.mdx', flavor: 'mdx', simplified: true });
+    render(<MarkdownView tab={makeTab({ doc })} />);
+    expect(screen.getByRole('note')).toHaveTextContent(
+      'MDX file — imports and components aren’t rendered.',
+    );
+  });
+
+  it('shows no banner for an MDX document that rendered in full', () => {
+    const doc = makeDoc({ path: '/home/u/docs/guide.mdx', flavor: 'mdx' });
+    render(<MarkdownView tab={makeTab({ doc })} />);
+    expect(screen.queryByRole('note')).toBeNull();
   });
 
   it('scrolls to in-document anchors', async () => {

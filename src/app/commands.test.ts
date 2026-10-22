@@ -3,7 +3,7 @@ import { useSettings } from '@/stores/settingsStore';
 import { useToasts } from '@/stores/toastStore';
 import { useUi } from '@/stores/uiStore';
 import { makeDoc, mockBackend, resetAppState } from '@/test/state';
-import { openDocument } from '@/features/documents/actions';
+import { openDocument, setDraft } from '@/features/documents/actions';
 import {
   commands,
   DEDUPE_WINDOW_MS,
@@ -92,6 +92,35 @@ describe('runCommand', () => {
     expect(useDocuments.getState().tabs).toEqual([]);
     await runCommand('tab.reopenClosed');
     expect(useDocuments.getState().tabs[0]?.path).toBe('/a.md');
+  });
+
+  it('enables the edit commands only when they can run', async () => {
+    expect(isCommandEnabled('edit.toggle')).toBe(false);
+    expect(isCommandEnabled('edit.save')).toBe(false);
+
+    mockBackend({
+      open_document: ({ path }) => makeDoc(path as string),
+      read_source: ({ path }) => ({
+        path: path as string,
+        name: 'a.md',
+        size: 1,
+        modifiedMs: 1,
+        content: '# a',
+        lossy: false,
+      }),
+    });
+    await openDocument('/a.md');
+    expect(isCommandEnabled('edit.toggle')).toBe(true);
+    expect(isCommandEnabled('edit.save')).toBe(false);
+
+    await runCommand('edit.toggle');
+    const tab = useDocuments.getState().tabs[0]!;
+    expect(tab.editing).toBe(true);
+    setDraft(tab.id, '# b');
+    expect(isCommandEnabled('edit.save')).toBe(true);
+
+    useDocuments.setState(({ tabs }) => ({ tabs: tabs.map((t) => ({ ...t, saving: true })) }));
+    expect(isCommandEnabled('edit.save')).toBe(false);
   });
 
   it('turns failures into a friendly toast', async () => {

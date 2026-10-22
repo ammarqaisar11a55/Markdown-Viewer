@@ -245,6 +245,12 @@ function MarkdownViewImpl({ tab }: MarkdownViewProps) {
               encoded.
             </p>
           )}
+          {doc.simplified && (
+            <p className="md-banner md-banner-info" role="note">
+              <Info aria-hidden="true" className="md-banner-icon" />
+              MDX file — imports and components aren’t rendered.
+            </p>
+          )}
           {performanceMode && (
             <p className="md-banner md-banner-info" role="note">
               <Info aria-hidden="true" className="md-banner-icon" />

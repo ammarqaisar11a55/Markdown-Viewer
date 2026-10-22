@@ -23,6 +23,11 @@ function tab(path: string): DocumentTab {
     scrollTop: 0,
     externalChange: null,
     revision: 1,
+    editing: false,
+    draft: null,
+    savedText: null,
+    dirty: false,
+    saving: false,
   };
 }
 

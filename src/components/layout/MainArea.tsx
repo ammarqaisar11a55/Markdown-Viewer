@@ -1,3 +1,4 @@
+import { MarkdownEditor } from '@/components/editor/MarkdownEditor';
 import { MarkdownView } from '@/components/markdown/MarkdownView';
 import { SearchBar } from '@/components/search/SearchBar';
 import { useDocuments } from '@/stores/documentsStore';
@@ -33,7 +34,10 @@ export function MainArea() {
         {tab.status === 'error' && (
           <DocumentErrorPanel tabId={tab.id} path={tab.path} error={tab.error} />
         )}
-        {tab.status !== 'error' && tab.doc && (
+        {tab.status !== 'error' && tab.doc && tab.editing && (
+          <MarkdownEditor key={`editor-${tab.id}`} tabId={tab.id} name={tab.name} />
+        )}
+        {tab.status !== 'error' && tab.doc && !tab.editing && (
           <>
             <MarkdownView key={tab.id} tab={tab} />
             <SearchBar />

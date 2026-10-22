@@ -5,7 +5,7 @@ import { useUi } from '@/stores/uiStore';
 import { Kbd } from '@/components/ui/Kbd';
 import { Modal } from '@/components/ui/Modal';
 
-const CATEGORIES: readonly CommandCategory[] = ['File', 'Tabs', 'View', 'App'];
+const CATEGORIES: readonly CommandCategory[] = ['File', 'Edit', 'Tabs', 'View', 'App'];
 
 interface Row {
   label: string;
@@ -29,6 +29,7 @@ function rowsFor(category: CommandCategory): Row[] {
 
 const GROUP_TITLES: Record<CommandCategory, string> = {
   File: 'Files',
+  Edit: 'Editing',
   Tabs: 'Tabs',
   View: 'View',
   App: 'Application',

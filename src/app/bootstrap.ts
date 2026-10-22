@@ -4,7 +4,8 @@ import { isTauri } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { homeDir } from '@tauri-apps/api/path';
 import { getCurrentWebview } from '@tauri-apps/api/webview';
-import { handleFileChanged, openPaths } from '@/features/documents/actions';
+import { getCurrentWindow } from '@tauri-apps/api/window';
+import { confirmQuit, handleFileChanged, openPaths } from '@/features/documents/actions';
 import { startWindowTitleSync } from '@/features/documents/windowTitle';
 import { refreshRecentExistence } from '@/features/recent/actions';
 import { restoreSession, startSessionPersistence } from '@/features/session/session';
@@ -65,6 +66,19 @@ async function subscribeNativeEvents(): Promise<void> {
   ]);
 }
 
+/** Closing the window must not throw away unsaved edits. */
+async function guardWindowClose(): Promise<void> {
+  if (!isTauri()) return;
+  const appWindow = getCurrentWindow();
+  await appWindow.onCloseRequested(async (event) => {
+    if (await confirmQuit()) {
+      await flushPersisted();
+      return;
+    }
+    event.preventDefault();
+  });
+}
+
 async function loadHomeDir(): Promise<void> {
   if (isTauri()) setHomeDir(await homeDir());
 }
@@ -81,6 +95,7 @@ export async function bootstrap(): Promise<void> {
     window.addEventListener('pagehide', () => void flushPersisted());
   });
   await step('native events', subscribeNativeEvents);
+  await step('close guard', guardWindowClose);
 
   let startupPaths: string[] = [];
   await step('startup paths', async () => {

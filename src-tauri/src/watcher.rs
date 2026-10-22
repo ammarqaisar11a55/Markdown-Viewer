@@ -93,6 +93,12 @@ impl FileWatcher {
         Ok(())
     }
 
+    /// Re-reads the stored state of `path` so a write made by this app is not
+    /// reported as an external change; unknown paths are ignored.
+    pub fn refresh(&self, path: &Path) {
+        lock(&self.registry).refresh(path);
+    }
+
     /// Releases one reference to `path`; unknown paths are ignored.
     pub fn unwatch(&self, path: &Path) {
         let mut registry = lock(&self.registry);

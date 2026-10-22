@@ -51,7 +51,7 @@ export function DocumentErrorPanel({ tabId, path, error }: DocumentErrorPanelPro
             variant="ghost"
             icon={<X aria-hidden />}
             onClick={() => {
-              closeTab(tabId);
+              void closeTab(tabId);
             }}
           >
             Close Tab

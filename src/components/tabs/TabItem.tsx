@@ -23,6 +23,7 @@ export const TabItem = memo(function TabItem({ id, active, onKeyDown }: TabItemP
   const path = useDocuments((s) => findTab(s, id)?.path ?? '');
   const status = useDocuments((s) => findTab(s, id)?.status ?? 'ready');
   const changed = useDocuments((s) => (findTab(s, id)?.externalChange ?? null) !== null);
+  const dirty = useDocuments((s) => findTab(s, id)?.dirty ?? false);
 
   const onContextMenu = (event: MouseEvent) => {
     event.preventDefault();
@@ -35,7 +36,10 @@ export const TabItem = memo(function TabItem({ id, active, onKeyDown }: TabItemP
   };
 
   return (
-    <Tooltip label={displayPath(path)} className="h-full shrink-0">
+    <Tooltip
+      label={dirty ? `${displayPath(path)} — Unsaved changes` : displayPath(path)}
+      className="h-full shrink-0"
+    >
       <div
         id={`tab-${id}`}
         role="tab"
@@ -53,7 +57,7 @@ export const TabItem = memo(function TabItem({ id, active, onKeyDown }: TabItemP
         onAuxClick={(event) => {
           if (event.button === 1) {
             event.preventDefault();
-            closeTab(id);
+            void closeTab(id);
           }
         }}
         onKeyDown={(event) => {
@@ -74,10 +78,17 @@ export const TabItem = memo(function TabItem({ id, active, onKeyDown }: TabItemP
         <span className={clsx('min-w-0 flex-1 truncate', status === 'error' && 'text-danger')}>
           {name}
         </span>
+        {dirty && <span className="sr-only">(unsaved changes)</span>}
         {changed && <span className="sr-only">(changed on disk)</span>}
         <span className="relative flex size-5 shrink-0 items-center justify-center">
-          {changed && (
-            <span aria-hidden className="size-2 rounded-full bg-warning group-hover:opacity-0" />
+          {(dirty || changed) && (
+            <span
+              aria-hidden
+              className={clsx(
+                'size-2 rounded-full group-hover:opacity-0',
+                dirty ? 'bg-accent' : 'bg-warning',
+              )}
+            />
           )}
           <button
             type="button"
@@ -85,15 +96,15 @@ export const TabItem = memo(function TabItem({ id, active, onKeyDown }: TabItemP
             aria-label={`Close ${name}`}
             onClick={(event) => {
               event.stopPropagation();
-              closeTab(id);
+              void closeTab(id);
             }}
             className={clsx(
               'absolute inset-0 flex items-center justify-center rounded-sm text-fg-subtle',
               'transition-colors duration-100 hover:bg-bg-muted hover:text-fg',
-              active || changed
+              active || changed || dirty
                 ? ''
                 : 'opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100',
-              changed && 'opacity-0 group-hover:opacity-100',
+              (changed || dirty) && 'opacity-0 group-hover:opacity-100',
             )}
           >
             <X aria-hidden className="size-3.5" />

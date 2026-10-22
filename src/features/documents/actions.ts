@@ -3,15 +3,29 @@
 // ignored.
 import { toAppError } from '@/lib/errors';
 import { basename, isMarkdownPath, samePath } from '@/lib/paths';
-import { pickMarkdownFiles } from '@/lib/platform/dialogs';
-import { checkFiles, openDocumentFile, unwatchFile, watchFile } from '@/lib/platform/ipc';
+import { confirmDialog, pickMarkdownFiles } from '@/lib/platform/dialogs';
+import {
+  checkFiles,
+  openDocumentFile,
+  readSource,
+  renderSource,
+  saveDocument as saveDocumentFile,
+  unwatchFile,
+  watchFile,
+} from '@/lib/platform/ipc';
 import { logger } from '@/lib/platform/logger';
 import { notify } from '@/lib/platform/system';
 import { MAX_CLOSED_PATHS, useDocuments } from '@/stores/documentsStore';
 import { addRecent } from '@/stores/recentStore';
 import { useSettings } from '@/stores/settingsStore';
 import { dismissToast, toast } from '@/stores/toastStore';
-import type { DocumentTab, FileChangedPayload, OpenedDocument } from '@/types';
+import type {
+  DocumentSource,
+  DocumentTab,
+  FileChangedPayload,
+  OpenedDocument,
+  RenderedSource,
+} from '@/types';
 import { openFolder } from '../folder/actions';
 
 export interface OpenDocumentOptions {
@@ -24,7 +38,24 @@ export interface ReloadOptions {
   preserveScroll?: boolean;
 }
 
+export interface StopEditingOptions {
+  /** Throw the draft away (asks first when there are unsaved changes). */
+  discard?: boolean;
+}
+
+/** Editing fields of a tab that has no draft. */
+const NOT_EDITING = {
+  editing: false,
+  draft: null,
+  savedText: null,
+  dirty: false,
+  saving: false,
+} as const satisfies Partial<DocumentTab>;
+
 const requestTokens = new Map<string, number>();
+/** Tab id → token of the in-flight `read_source` / `render_source` call. */
+const sourceTokens = new Map<string, number>();
+const previewTokens = new Map<string, number>();
 /** Tab id → path currently watched for that tab. */
 const watchedPaths = new Map<string, string>();
 let tokenCounter = 0;
@@ -71,6 +102,8 @@ function stopWatching(tabId: string): void {
 /** Forgets a tab's in-flight load and file watch. */
 function releaseTab(tab: DocumentTab): void {
   requestTokens.delete(tab.id);
+  sourceTokens.delete(tab.id);
+  previewTokens.delete(tab.id);
   stopWatching(tab.id);
   dismissToast(changeToastId(tab.path));
 }
@@ -91,6 +124,7 @@ function createTab(path: string, scrollTop: number): DocumentTab {
     scrollTop,
     externalChange: null,
     revision: 0,
+    ...NOT_EDITING,
   };
 }
 
@@ -137,11 +171,45 @@ function applyLoaded(tabId: string, doc: OpenedDocument, scrollTop: number): voi
     scrollTop,
     externalChange: null,
     revision: tab.revision + 1,
+    // A load always lands on the text that is on disk; callers that could
+    // lose a draft ask for confirmation first.
+    ...NOT_EDITING,
   });
   if (!samePath(tab.path, doc.path)) dismissToast(changeToastId(tab.path));
   dismissToast(changeToastId(doc.path));
   startWatching(tabId, doc.path);
   addRecent(doc.path);
+}
+
+/**
+ * Asks before unsaved changes are thrown away. A dialog that cannot be shown
+ * counts as "no", so a draft is never lost by accident.
+ */
+async function confirmDiscard(dirty: DocumentTab[]): Promise<boolean> {
+  const first = dirty[0];
+  if (first === undefined) return true;
+  const message =
+    dirty.length === 1
+      ? `${first.name} has unsaved changes.\n\nDiscard them?`
+      : `${dirty.length} files have unsaved changes.\n\nDiscard them?`;
+  try {
+    return await confirmDialog(message, {
+      title: 'Unsaved Changes',
+      okLabel: 'Discard',
+      cancelLabel: 'Cancel',
+      kind: 'warning',
+    });
+  } catch (err) {
+    logger.warn('Could not ask about unsaved changes', err);
+    return false;
+  }
+}
+
+/** True when the given tabs may be closed (no draft, or the user agreed). */
+async function confirmClosing(ids: string[]): Promise<boolean> {
+  const dirty = useDocuments.getState().tabs.filter((tab) => ids.includes(tab.id) && tab.dirty);
+  if (dirty.length === 0) return true;
+  return confirmDiscard(dirty);
 }
 
 function showError(err: unknown, path: string) {
@@ -162,7 +230,9 @@ export async function openDocument(path: string, opts: OpenDocumentOptions = {})
   const tab = createTab(path, opts.scrollTop ?? 0);
   const { tabs, activeId, closedPaths } = useDocuments.getState();
   const newTab = opts.newTab ?? useSettings.getState().openInNewTab;
-  const replaced = !newTab && activeId !== null ? tabs.find((t) => t.id === activeId) : undefined;
+  const active = activeId === null ? undefined : tabs.find((t) => t.id === activeId);
+  // A tab with unsaved changes is never replaced; the document opens beside it.
+  const replaced = !newTab && active?.dirty !== true ? active : undefined;
 
   if (replaced !== undefined) {
     releaseTab(replaced);
@@ -191,6 +261,10 @@ export async function openDocument(path: string, opts: OpenDocumentOptions = {})
 export async function reloadDocument(tabId: string, options: ReloadOptions = {}): Promise<void> {
   const tab = getTab(tabId);
   if (tab === undefined) return;
+  // Reloading replaces the draft with what is on disk.
+  if (tab.dirty && !(await confirmDiscard([tab]))) return;
+  if (getTab(tabId) === undefined) return;
+  const wasEditing = tab.editing;
   const preserveScroll = options.preserveScroll ?? true;
   if (tab.doc === null) patchTab(tabId, { status: 'loading', error: null });
 
@@ -200,6 +274,8 @@ export async function reloadDocument(tabId: string, options: ReloadOptions = {})
   if (current === undefined) return;
   if (result.ok) {
     applyLoaded(tabId, result.doc, preserveScroll ? current.scrollTop : 0);
+    // Stay in the editor, now showing the reloaded text.
+    if (wasEditing) await startEditing(tabId);
     return;
   }
   const error = showError(result.error, current.path);
@@ -281,19 +357,35 @@ function removeTabs(ids: string[], rememberClosed = true): void {
   });
 }
 
-export function closeTab(id: string): void {
+/**
+ * Asks about unsaved changes before the window closes.
+ *
+ * Returns true when it is safe to quit; cancelling keeps the window open with
+ * every draft intact.
+ */
+export async function confirmQuit(): Promise<boolean> {
+  const ids = useDocuments.getState().tabs.map((tab) => tab.id);
+  return confirmClosing(ids);
+}
+
+export async function closeTab(id: string): Promise<void> {
+  if (!(await confirmClosing([id]))) return;
   removeTabs([id]);
 }
 
-export function closeOtherTabs(id: string): void {
+export async function closeOtherTabs(id: string): Promise<void> {
   const { tabs } = useDocuments.getState();
   if (!tabs.some((tab) => tab.id === id)) return;
-  removeTabs(tabs.filter((tab) => tab.id !== id).map((tab) => tab.id));
+  const ids = tabs.filter((tab) => tab.id !== id).map((tab) => tab.id);
+  if (!(await confirmClosing(ids))) return;
+  removeTabs(ids);
   activateTab(id);
 }
 
-export function closeAllTabs(): void {
-  removeTabs(useDocuments.getState().tabs.map((tab) => tab.id));
+export async function closeAllTabs(): Promise<void> {
+  const ids = useDocuments.getState().tabs.map((tab) => tab.id);
+  if (!(await confirmClosing(ids))) return;
+  removeTabs(ids);
 }
 
 export async function reopenClosedTab(): Promise<void> {
@@ -337,13 +429,167 @@ export function dismissExternalChange(id: string): void {
   if (tab.externalChange !== null) patchTab(id, { externalChange: null });
 }
 
+// ---------------------------------------------------------------------------
+// Editing
+// ---------------------------------------------------------------------------
+
+/** Re-renders the preview from the draft, without touching the file. */
+async function previewDraft(tabId: string): Promise<void> {
+  const tab = getTab(tabId);
+  if (tab === undefined) return;
+  if (tab.draft === null || tab.doc === null) return;
+  const token = ++tokenCounter;
+  previewTokens.set(tabId, token);
+  let rendered: RenderedSource;
+  try {
+    rendered = await renderSource(tab.path, tab.draft, renderOptions());
+  } catch (err) {
+    previewTokens.delete(tabId);
+    // The last saved render stays on screen.
+    logger.warn(`Could not preview unsaved changes to ${tab.path}`, err);
+    return;
+  }
+  if (previewTokens.get(tabId) !== token) return;
+  previewTokens.delete(tabId);
+  const current = getTab(tabId);
+  if (current === undefined) return;
+  if (current.doc === null) return;
+  patchTab(tabId, {
+    doc: {
+      ...current.doc,
+      html: rendered.html,
+      headings: rendered.headings,
+      wordCount: rendered.wordCount,
+      flavor: rendered.flavor,
+      simplified: rendered.simplified,
+    },
+    revision: current.revision + 1,
+  });
+}
+
+/** Opens the editor for a tab, loading the raw file text first. */
+export async function startEditing(tabId: string): Promise<void> {
+  const tab = getTab(tabId);
+  if (tab === undefined) return;
+  if (tab.status !== 'ready' || tab.doc === null || tab.editing) return;
+  // A draft kept while reading goes straight back into the editor.
+  if (tab.draft !== null) {
+    patchTab(tabId, { editing: true });
+    return;
+  }
+
+  const token = ++tokenCounter;
+  sourceTokens.set(tabId, token);
+  let source: DocumentSource;
+  try {
+    source = await readSource(tab.path);
+  } catch (err) {
+    if (sourceTokens.get(tabId) !== token) return;
+    sourceTokens.delete(tabId);
+    const error = toAppError(err, 'file');
+    logger.error(`Failed to read ${tab.path} for editing`, error.technical);
+    toast({
+      variant: 'error',
+      title: 'Unable to edit this file.',
+      description: error.description,
+    });
+    return;
+  }
+  if (sourceTokens.get(tabId) !== token || getTab(tabId) === undefined) return;
+  sourceTokens.delete(tabId);
+  patchTab(tabId, {
+    editing: true,
+    draft: source.content,
+    savedText: source.content,
+    dirty: false,
+  });
+}
+
+/** Records editor input and keeps `dirty` in sync. */
+export function setDraft(tabId: string, text: string): void {
+  const tab = getTab(tabId);
+  if (tab === undefined) return;
+  if (tab.draft === null || tab.draft === text) return;
+  patchTab(tabId, { draft: text, dirty: text !== tab.savedText });
+}
+
+/** Writes the draft to disk and adopts the re-rendered document. */
+export async function saveDocument(tabId: string): Promise<void> {
+  const tab = getTab(tabId);
+  if (tab === undefined) return;
+  if (tab.draft === null || !tab.dirty || tab.saving) return;
+  const content = tab.draft;
+  patchTab(tabId, { saving: true });
+
+  let doc: OpenedDocument;
+  try {
+    doc = await saveDocumentFile(tab.path, content, renderOptions());
+  } catch (err) {
+    if (getTab(tabId) === undefined) return;
+    patchTab(tabId, { saving: false });
+    const error = toAppError(err, 'save');
+    logger.error(`Failed to save ${tab.path}`, error.technical);
+    toast({ variant: 'error', title: error.title, description: error.description });
+    return;
+  }
+
+  const current = getTab(tabId);
+  if (current === undefined) return;
+  patchTab(tabId, {
+    path: doc.path,
+    name: doc.name,
+    status: 'ready',
+    doc,
+    error: null,
+    externalChange: null,
+    revision: current.revision + 1,
+    savedText: content,
+    // The user may have typed on while the write was in flight.
+    dirty: current.draft !== content,
+    saving: false,
+  });
+  if (!samePath(current.path, doc.path)) dismissToast(changeToastId(current.path));
+  dismissToast(changeToastId(doc.path));
+  startWatching(tabId, doc.path);
+}
+
+/**
+ * Leaves the editor. Without `discard` the draft is kept and the preview is
+ * re-rendered from it; with `discard` the draft is thrown away after asking.
+ */
+export async function stopEditing(tabId: string, options: StopEditingOptions = {}): Promise<void> {
+  const tab = getTab(tabId);
+  if (tab === undefined) return;
+  if (!tab.editing) return;
+
+  if (options.discard === true) {
+    if (tab.dirty && !(await confirmDiscard([tab]))) return;
+    if (getTab(tabId) === undefined) return;
+    patchTab(tabId, { ...NOT_EDITING });
+    return;
+  }
+
+  patchTab(tabId, { editing: false });
+  if (tab.dirty) await previewDraft(tabId);
+}
+
+export async function toggleEditing(tabId: string): Promise<void> {
+  const tab = getTab(tabId);
+  if (tab === undefined) return;
+  if (tab.editing) await stopEditing(tabId);
+  else await startEditing(tabId);
+}
+
 /** Re-renders every document (e.g. after the "Render raw HTML" setting changed). */
 export async function rerenderAllDocuments(): Promise<void> {
-  const ids = useDocuments
-    .getState()
-    .tabs.filter((tab) => tab.status !== 'loading')
-    .map((tab) => tab.id);
-  await Promise.all(ids.map((id) => reloadDocument(id, { preserveScroll: true })));
+  const candidates = useDocuments.getState().tabs.filter((tab) => tab.status !== 'loading');
+  // Tabs with unsaved changes are never reloaded from disk; their preview is
+  // re-rendered from the draft instead.
+  await Promise.all(
+    candidates.map((tab) =>
+      tab.dirty ? previewDraft(tab.id) : reloadDocument(tab.id, { preserveScroll: true }),
+    ),
+  );
 }
 
 /** Handles the `file-changed` event emitted by the file watcher. */
@@ -361,7 +607,7 @@ export async function handleFileChanged(payload: FileChangedPayload): Promise<vo
       description: tab.name,
       durationMs: null,
       actions: [
-        { label: 'Close Tab', onClick: () => closeTab(tab.id), primary: true },
+        { label: 'Close Tab', onClick: () => void closeTab(tab.id), primary: true },
         { label: 'Keep Open', onClick: () => dismissExternalChange(tab.id) },
       ],
     });
@@ -374,6 +620,27 @@ export async function handleFileChanged(payload: FileChangedPayload): Promise<vo
     payload.modifiedMs !== null &&
     tab.doc?.modifiedMs === payload.modifiedMs;
   if (unchanged) return;
+
+  // Never silently throw a draft away, not even with auto-reload on.
+  if (tab.dirty) {
+    patchTab(tab.id, { externalChange: 'modified' });
+    toast({
+      id: toastId,
+      variant: 'warning',
+      title: 'File changed on disk while you were editing.',
+      description: `${tab.name} — your unsaved changes are still here.`,
+      durationMs: null,
+      actions: [
+        { label: 'Keep Editing', primary: true, onClick: () => dismissExternalChange(tab.id) },
+        {
+          label: 'Reload',
+          onClick: () => void reloadDocument(tab.id, { preserveScroll: true }),
+        },
+      ],
+    });
+    void notify('File changed on disk', tab.name);
+    return;
+  }
 
   if (useSettings.getState().autoReload || tab.status === 'error') {
     await reloadDocument(tab.id, { preserveScroll: true });
@@ -401,5 +668,7 @@ export async function handleFileChanged(payload: FileChangedPayload): Promise<vo
 /** Test helper: forget module-level bookkeeping. */
 export function resetDocumentActionsForTests(): void {
   requestTokens.clear();
+  sourceTokens.clear();
+  previewTokens.clear();
   watchedPaths.clear();
 }

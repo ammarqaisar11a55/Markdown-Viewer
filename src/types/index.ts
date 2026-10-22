@@ -16,7 +16,10 @@ export interface RenderOptions {
   allowHtml: boolean;
 }
 
-/** Result of the `open_document` command. */
+/** How a document's source is interpreted. */
+export type DocumentFlavor = 'markdown' | 'mdx';
+
+/** Result of the `open_document` and `save_document` commands. */
 export interface OpenedDocument {
   /** Canonical absolute path. */
   path: string;
@@ -28,6 +31,29 @@ export interface OpenedDocument {
   headings: Heading[];
   wordCount: number;
   /** The file was not valid UTF-8; invalid bytes were replaced. */
+  lossy: boolean;
+  flavor: DocumentFlavor;
+  /** MDX only: imports/exports or JSX were removed before rendering. */
+  simplified: boolean;
+}
+
+/** Result of the `render_source` command (unsaved text). */
+export interface RenderedSource {
+  html: string;
+  headings: Heading[];
+  wordCount: number;
+  flavor: DocumentFlavor;
+  simplified: boolean;
+}
+
+/** Result of the `read_source` command. */
+export interface DocumentSource {
+  path: string;
+  name: string;
+  size: number;
+  modifiedMs: number | null;
+  /** Raw file text, as written on disk. */
+  content: string;
   lossy: boolean;
 }
 
@@ -148,4 +174,16 @@ export interface DocumentTab {
   externalChange: 'modified' | 'removed' | null;
   /** Increments on every successful (re)load; use as a render key. */
   revision: number;
+
+  // --- Editing -------------------------------------------------------------
+  /** The editor is open for this tab. */
+  editing: boolean;
+  /** Editor text while editing; `null` when the source has not been loaded. */
+  draft: string | null;
+  /** The text on disk when the draft was loaded or last saved. */
+  savedText: string | null;
+  /** `draft` differs from `savedText`. */
+  dirty: boolean;
+  /** A save is in flight. */
+  saving: boolean;
 }

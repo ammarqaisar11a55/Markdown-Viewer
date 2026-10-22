@@ -9,6 +9,8 @@ import {
   openFileDialog,
   reloadDocument,
   reopenClosedTab,
+  saveDocument,
+  toggleEditing,
 } from '@/features/documents/actions';
 import { closeFolder, openFolderDialog } from '@/features/folder/actions';
 import { toAppError } from '@/lib/errors';
@@ -34,6 +36,8 @@ export type CommandId =
   | 'tab.reopenClosed'
   | 'tab.next'
   | 'tab.previous'
+  | 'edit.toggle'
+  | 'edit.save'
   | 'view.toggleSidebar'
   | 'view.readingMode'
   | 'view.toggleTheme'
@@ -47,7 +51,7 @@ export type CommandId =
   | 'app.about'
   | 'app.quit';
 
-export type CommandCategory = 'File' | 'Tabs' | 'View' | 'App';
+export type CommandCategory = 'File' | 'Edit' | 'Tabs' | 'View' | 'App';
 
 export interface Command {
   id: CommandId;
@@ -161,6 +165,28 @@ export const commands: Record<CommandId, Command> = {
     enabled: () => useDocuments.getState().tabs.length > 1,
     repeatable: true,
   },
+  'edit.toggle': {
+    id: 'edit.toggle',
+    label: 'Edit Document',
+    shortcuts: ['Mod+E'],
+    category: 'Edit',
+    run: withActiveTab(toggleEditing),
+    enabled: () => {
+      const tab = getActiveTab();
+      return tab !== null && tab.status === 'ready' && tab.doc !== null;
+    },
+  },
+  'edit.save': {
+    id: 'edit.save',
+    label: 'Save',
+    shortcuts: ['Mod+S'],
+    category: 'Edit',
+    run: withActiveTab(saveDocument),
+    enabled: () => {
+      const tab = getActiveTab();
+      return tab !== null && tab.dirty && !tab.saving;
+    },
+  },
   'view.toggleSidebar': {
     id: 'view.toggleSidebar',
     label: 'Toggle Sidebar',
@@ -214,7 +240,10 @@ export const commands: Record<CommandId, Command> = {
     shortcuts: ['Mod+F'],
     category: 'View',
     run: () => ui().setSearchOpen(true),
-    enabled: () => getActiveTab()?.status === 'ready',
+    enabled: () => {
+      const tab = getActiveTab();
+      return tab?.status === 'ready' && !tab.editing;
+    },
   },
   'view.fullscreen': {
     id: 'view.fullscreen',

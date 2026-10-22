@@ -43,11 +43,18 @@ const readyTab: DocumentTab = {
     headings: [],
     wordCount: 10,
     lossy: false,
+    flavor: 'markdown',
+    simplified: false,
   },
   error: null,
   scrollTop: 0,
   externalChange: null,
   revision: 1,
+  editing: false,
+  draft: null,
+  savedText: null,
+  dirty: false,
+  saving: false,
 };
 
 describe('OutlinePanel', () => {

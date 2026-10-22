@@ -2,12 +2,41 @@
 // Data commands always go through `invoke` (callers handle rejections);
 // fire-and-forget side-effect commands are no-ops outside Tauri.
 import { invoke, isTauri } from '@tauri-apps/api/core';
-import type { DirectoryTree, OpenedDocument, RenderOptions } from '@/types';
+import type {
+  DirectoryTree,
+  DocumentSource,
+  OpenedDocument,
+  RenderOptions,
+  RenderedSource,
+} from '@/types';
 
 export { isTauri };
 
 export function openDocumentFile(path: string, options: RenderOptions): Promise<OpenedDocument> {
   return invoke<OpenedDocument>('open_document', { path, options });
+}
+
+/** Raw file text for the editor. */
+export function readSource(path: string): Promise<DocumentSource> {
+  return invoke<DocumentSource>('read_source', { path });
+}
+
+/** Writes the file and returns the re-rendered document. */
+export function saveDocument(
+  path: string,
+  content: string,
+  options: RenderOptions,
+): Promise<OpenedDocument> {
+  return invoke<OpenedDocument>('save_document', { path, content, options });
+}
+
+/** Renders unsaved text; `path` only selects the flavor, the file is not read. */
+export function renderSource(
+  path: string,
+  source: string,
+  options: RenderOptions,
+): Promise<RenderedSource> {
+  return invoke<RenderedSource>('render_source', { path, source, options });
 }
 
 export function scanFolder(path: string, showAllFiles: boolean): Promise<DirectoryTree> {

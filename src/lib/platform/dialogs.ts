@@ -5,6 +5,8 @@ export interface ConfirmOptions {
   title: string;
   okLabel: string;
   cancelLabel: string;
+  /** Dialog icon; defaults to `info`. */
+  kind?: 'info' | 'warning';
 }
 
 export async function pickMarkdownFiles(): Promise<string[]> {
@@ -13,7 +15,7 @@ export async function pickMarkdownFiles(): Promise<string[]> {
     title: 'Open Markdown File',
     multiple: true,
     directory: false,
-    filters: [{ name: 'Markdown', extensions: ['md', 'markdown', 'mdown', 'mkd'] }],
+    filters: [{ name: 'Markdown', extensions: ['md', 'markdown', 'mdown', 'mkd', 'mdx'] }],
   });
   return selected ?? [];
 }
@@ -25,5 +27,6 @@ export async function pickFolder(): Promise<string | null> {
 
 export async function confirmDialog(message: string, options: ConfirmOptions): Promise<boolean> {
   if (!isTauri()) return window.confirm(message);
-  return confirm(message, { ...options, kind: 'info' });
+  const { kind = 'info', ...rest } = options;
+  return confirm(message, { ...rest, kind });
 }

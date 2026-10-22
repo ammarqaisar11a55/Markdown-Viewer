@@ -44,6 +44,11 @@ vi.mock('@/components/markdown/MarkdownView', () => ({
   ),
 }));
 vi.mock('@/components/search/SearchBar', () => ({ SearchBar: () => null }));
+vi.mock('@/components/editor/MarkdownEditor', () => ({
+  MarkdownEditor: ({ name }: { name: string }) => (
+    <div data-testid="editor">{`Editing ${name}`}</div>
+  ),
+}));
 
 function makeTab(overrides: Partial<DocumentTab> = {}): DocumentTab {
   return {
@@ -60,11 +65,18 @@ function makeTab(overrides: Partial<DocumentTab> = {}): DocumentTab {
       headings: [],
       wordCount: 1150,
       lossy: false,
+      flavor: 'markdown',
+      simplified: false,
     },
     error: null,
     scrollTop: 0,
     externalChange: null,
     revision: 1,
+    editing: false,
+    draft: null,
+    savedText: null,
+    dirty: false,
+    saving: false,
     ...overrides,
   };
 }
@@ -141,6 +153,13 @@ describe('MainArea', () => {
     expect(screen.getByRole('document', { name: 'guide.md' })).toHaveTextContent(
       'Rendered content',
     );
+  });
+
+  it('replaces the reading view with the editor while editing', () => {
+    setTabs(makeTab({ editing: true, draft: '# Draft', savedText: '# Draft' }));
+    render(<MainArea />);
+    expect(screen.getByTestId('editor')).toHaveTextContent('Editing guide.md');
+    expect(screen.queryByRole('document')).toBeNull();
   });
 
   it('shows a loading skeleton', () => {
@@ -220,6 +239,13 @@ describe('StatusBar', () => {
     await user.click(screen.getByText(/guide\.md$/));
     expect(system.copyText).toHaveBeenCalledWith('/home/me/docs/guide.md');
     expect(useToasts.getState().toasts[0]?.title).toBe('Path copied');
+  });
+
+  it('shows the editing state instead of the word count while editing', () => {
+    setTabs(makeTab({ editing: true, draft: 'x', savedText: 'y', dirty: true }));
+    render(<StatusBar />);
+    expect(screen.getByText('Editing — unsaved changes')).toBeInTheDocument();
+    expect(screen.queryByText('1,150 words')).not.toBeInTheDocument();
   });
 
   it('omits document details without an active document', () => {

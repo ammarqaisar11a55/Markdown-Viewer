@@ -27,6 +27,11 @@ const FILE_MENU: &[Entry] = &[
     Some(("app.quit", "&Quit", Some("CmdOrCtrl+Q"))),
 ];
 
+const EDIT_MENU: &[Entry] = &[
+    Some(("edit.toggle", "&Edit Document", Some("CmdOrCtrl+E"))),
+    Some(("edit.save", "&Save", Some("CmdOrCtrl+S"))),
+];
+
 const VIEW_MENU: &[Entry] = &[
     Some(("view.toggleSidebar", "Toggle &Sidebar", Some("CmdOrCtrl+B"))),
     Some(("view.readingMode", "&Reading Mode", Some("CmdOrCtrl+Shift+R"))),
@@ -50,12 +55,11 @@ const HELP_MENU: &[Entry] = &[
     Some(("app.about", "&About Markdown Viewer", None)),
 ];
 
-fn submenu<R: Runtime>(
+fn add_entries<'a, R: Runtime>(
+    mut builder: SubmenuBuilder<'a, R, AppHandle<R>>,
     app: &AppHandle<R>,
-    title: &str,
     entries: &[Entry],
-) -> tauri::Result<tauri::menu::Submenu<R>> {
-    let mut builder = SubmenuBuilder::new(app, title);
+) -> tauri::Result<SubmenuBuilder<'a, R, AppHandle<R>>> {
     for entry in entries {
         builder = match entry {
             Some((id, label, accelerator)) => {
@@ -68,12 +72,27 @@ fn submenu<R: Runtime>(
             None => builder.separator(),
         };
     }
-    builder.build()
+    Ok(builder)
+}
+
+fn submenu<R: Runtime>(
+    app: &AppHandle<R>,
+    title: &str,
+    entries: &[Entry],
+) -> tauri::Result<tauri::menu::Submenu<R>> {
+    add_entries(SubmenuBuilder::new(app, title), app, entries)?.build()
 }
 
 pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
     let file = submenu(app, "&File", FILE_MENU)?;
-    let edit = SubmenuBuilder::new(app, "&Edit").copy().separator().select_all().build()?;
+    // The document actions come first; the predefined clipboard items below them
+    // are handled natively by the webview.
+    let edit = add_entries(SubmenuBuilder::new(app, "&Edit"), app, EDIT_MENU)?
+        .separator()
+        .copy()
+        .separator()
+        .select_all()
+        .build()?;
     let view = submenu(app, "&View", VIEW_MENU)?;
     let help = submenu(app, "&Help", HELP_MENU)?;
     MenuBuilder::new(app).items(&[&file, &edit, &view, &help]).build()
@@ -81,7 +100,7 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
 
 pub fn on_event<R: Runtime>(app: &AppHandle<R>, event: MenuEvent) {
     let id = event.id().as_ref();
-    let known = [FILE_MENU, VIEW_MENU, HELP_MENU]
+    let known = [FILE_MENU, EDIT_MENU, VIEW_MENU, HELP_MENU]
         .iter()
         .flat_map(|entries| entries.iter().flatten())
         .any(|(entry_id, _, _)| *entry_id == id);

@@ -1,4 +1,4 @@
-import { BookOpen, PanelLeftOpen, Search, Settings } from 'lucide-react';
+import { BookOpen, PanelLeftOpen, Pencil, Search, Settings } from 'lucide-react';
 import { useCallback, useEffect, useRef, type KeyboardEvent } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { getShortcutLabel, runCommand } from '@/app/commands';
@@ -12,6 +12,11 @@ import { findByData } from '@/components/ui/dom';
 export function TabBar() {
   const tabIds = useDocuments(useShallow((s) => s.tabs.map((t) => t.id)));
   const activeId = useDocuments((s) => s.activeId);
+  const editing = useDocuments((s) => s.tabs.find((t) => t.id === s.activeId)?.editing ?? false);
+  const canEdit = useDocuments((s) => {
+    const tab = s.tabs.find((t) => t.id === s.activeId);
+    return tab?.status === 'ready' && tab.doc !== null;
+  });
   const sidebarCollapsed = useUi((s) => s.sidebarCollapsed);
   const searchOpen = useUi((s) => s.searchOpen);
   const setSearchOpen = useUi((s) => s.setSearchOpen);
@@ -60,7 +65,7 @@ export function TabBar() {
         break;
       case 'Delete':
         event.preventDefault();
-        closeTab(id);
+        void closeTab(id);
         requestAnimationFrame(() => {
           scrollerRef.current?.querySelector<HTMLElement>('[role="tab"][tabindex="0"]')?.focus();
         });
@@ -112,6 +117,14 @@ export function TabBar() {
             if (searchOpen) setSearchOpen(false);
             else void runCommand('view.find');
           }}
+        />
+        <IconButton
+          label={editing ? 'Stop editing' : 'Edit document'}
+          shortcut={getShortcutLabel('edit.toggle')}
+          icon={<Pencil />}
+          active={editing}
+          disabled={!canEdit}
+          onClick={() => void runCommand('edit.toggle')}
         />
         <IconButton
           label="Reading mode"

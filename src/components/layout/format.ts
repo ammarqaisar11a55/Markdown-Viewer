@@ -15,3 +15,9 @@ export function formatReadingTime(words: number): string {
 export function formatZoom(zoom: number): string {
   return `${Math.round(zoom * 100)}%`;
 }
+
+/** Status-bar text while the editor is open. */
+export function formatEditingState(saving: boolean, dirty: boolean): string {
+  if (saving) return 'Saving…';
+  return dirty ? 'Editing — unsaved changes' : 'Editing';
+}

@@ -35,7 +35,7 @@ export function ExternalChangeBanner({ tabId, kind }: ExternalChangeBannerProps)
               type="button"
               className={clsx(actionClass, 'text-fg')}
               onClick={() => {
-                closeTab(tabId);
+                void closeTab(tabId);
               }}
             >
               Close

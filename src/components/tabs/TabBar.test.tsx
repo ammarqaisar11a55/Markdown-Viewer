@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { closeContextMenu } from '@/stores/contextMenuStore';
 import { useDocuments } from '@/stores/documentsStore';
 import { useUi } from '@/stores/uiStore';
+import { makeDoc } from '@/test/state';
 import type { DocumentTab } from '@/types';
 import { ContextMenu } from '@/components/ui/ContextMenu';
 import { installDomStubs } from '@/components/ui/testing';
@@ -40,6 +41,11 @@ function tab(id: string, name: string, extra: Partial<DocumentTab> = {}): Docume
     scrollTop: 0,
     externalChange: null,
     revision: 1,
+    editing: false,
+    draft: null,
+    savedText: null,
+    dirty: false,
+    saving: false,
     ...extra,
   };
 }
@@ -80,6 +86,36 @@ describe('TabBar', () => {
     expect(tabs[0]).toHaveAttribute('tabindex', '0');
     expect(tabs[1]).toHaveAttribute('aria-selected', 'false');
     expect(tabs[1]).toHaveAttribute('tabindex', '-1');
+  });
+
+  it('marks tabs with unsaved changes', () => {
+    useDocuments.setState({
+      tabs: [tab('a', 'README.md', { dirty: true, editing: true, draft: 'x', savedText: 'y' })],
+      activeId: 'a',
+      closedPaths: [],
+    });
+    render(<TabBar />);
+    const item = screen.getByRole('tab', { name: /README\.md/ });
+    expect(item).toHaveTextContent('(unsaved changes)');
+    expect(item.querySelector('.bg-accent')).not.toBeNull();
+  });
+
+  it('enables the edit toggle only for a ready document', async () => {
+    const user = userEvent.setup();
+    const { unmount } = render(<TabBar />);
+    expect(screen.getByRole('button', { name: 'Edit document' })).toBeDisabled();
+    unmount();
+
+    useDocuments.setState({
+      tabs: [tab('a', 'README.md', { doc: makeDoc('/docs/README.md') })],
+      activeId: 'a',
+      closedPaths: [],
+    });
+    render(<TabBar />);
+    const button = screen.getByRole('button', { name: 'Edit document' });
+    expect(button).toBeEnabled();
+    await user.click(button);
+    expect(commands.runCommand).toHaveBeenCalledWith('edit.toggle');
   });
 
   it('activates a tab on click', async () => {

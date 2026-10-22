@@ -2,6 +2,9 @@
 /// that `capabilities/default.json` grants explicitly.
 const COMMANDS: &[&str] = &[
     "open_document",
+    "read_source",
+    "render_source",
+    "save_document",
     "scan_folder",
     "check_files",
     "watch_file",

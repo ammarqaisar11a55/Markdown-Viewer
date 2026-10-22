@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-22
+
 ### Added
 
 - **MDX support** ([#2](https://github.com/ammarqaisar11a55/Markdown-Viewer/issues/2)).
@@ -114,5 +116,6 @@ Initial release.
 - Remote image loading can be disabled; insecure `http:` images are always
   blocked.
 
-[Unreleased]: https://github.com/ammarqaisar11a55/Markdown-Viewer/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/ammarqaisar11a55/Markdown-Viewer/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/ammarqaisar11a55/Markdown-Viewer/releases/tag/v1.1.0
 [1.0.0]: https://github.com/ammarqaisar11a55/Markdown-Viewer/releases/tag/v1.0.0

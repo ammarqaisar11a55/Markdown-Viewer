@@ -8,6 +8,33 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- **MDX support** ([#2](https://github.com/ammarqaisar11a55/Markdown-Viewer/issues/2)).
+  `.mdx` files open through every path the app already supports (file picker,
+  drag and drop, folder tree, Quick Open, "Open with") and render their
+  Markdown. Because the viewer never executes code from a document, `import`
+  and `export` statements, JSX components and JSX comments are removed before
+  rendering — the Markdown inside a component is kept — and `{expressions}` are
+  shown literally. Code blocks are never touched. The document shows a notice
+  when it was simplified this way.
+- **Editing** ([#1](https://github.com/ammarqaisar11a55/Markdown-Viewer/issues/1)).
+  `Ctrl+E` opens the current document in a plain Markdown editor and `Ctrl+S`
+  saves it back to the file; `Esc` returns to reading with the preview
+  re-rendered from the draft. Unsaved changes are marked on the tab and in the
+  editor status line, and are never discarded without asking — closing tabs,
+  reloading, quitting and external changes to the file all prompt first. Saves
+  are written to a temporary file and renamed into place, so an interrupted
+  save cannot truncate a document.
+- Screenshots in the README.
+
+### Changed
+
+- The app registers `.mdx` with the Linux desktop entry and the Windows
+  installer alongside `.md`, `.markdown`, `.mdown` and `.mkd`.
+- Auto-reload no longer reloads a document that has unsaved changes; it warns
+  instead and keeps the draft.
+
 ## [1.0.0] - 2026-09-17
 
 Initial release.

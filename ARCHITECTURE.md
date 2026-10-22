@@ -16,6 +16,8 @@ documents are never allowed to act on the system.
 - [Tauri and Rust architecture](#tauri-and-rust-architecture)
 - [File handling](#file-handling)
 - [Markdown rendering pipeline](#markdown-rendering-pipeline)
+- [MDX documents](#mdx-documents)
+- [Editing and saving](#editing-and-saving)
 - [Large documents](#large-documents)
 - [Syntax highlighting](#syntax-highlighting)
 - [Search](#search)
@@ -184,18 +186,23 @@ names. Filesystem commands reject with `FsErrorPayload { kind, message }`, where
 `kind` is one of `notFound`, `permissionDenied`, `notAFile`, `notADirectory`,
 `unsupportedType`, `tooLarge` or `io`.
 
-| Command              | Arguments                              | Returns          | Notes                                                                                                                                                                                       |
-| -------------------- | -------------------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `open_document`      | `path: string, options: RenderOptions` | `OpenedDocument` | Canonicalizes the path, accepts only `.md`, `.markdown`, `.mdown`, `.mkd`, max 64 MB. Reads, renders and sanitizes off the main thread. Invalid UTF-8 is replaced and flagged with `lossy`. |
-| `scan_folder`        | `path: string, showAllFiles: boolean`  | `DirectoryTree`  | Recursive listing (see [Folder mode](#folder-mode)).                                                                                                                                        |
-| `check_files`        | `paths: string[]`                      | `boolean[]`      | Whether each path exists and is a file. Used for the recent files list.                                                                                                                     |
-| `watch_file`         | `path: string`                         | `void`           | Reference-counted.                                                                                                                                                                          |
-| `unwatch_file`       | `path: string`                         | `void`           |                                                                                                                                                                                             |
-| `take_startup_paths` | —                                      | `string[]`       | Absolute file/folder paths from the command line; returned once.                                                                                                                            |
-| `set_menu_visible`   | `visible: boolean`                     | `void`           | Hides the native menu in reading mode.                                                                                                                                                      |
+| Command              | Arguments                              | Returns          | Notes                                                                                                                                                                                               |
+| -------------------- | -------------------------------------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `open_document`      | `path: string, options: RenderOptions` | `OpenedDocument` | Canonicalizes the path, accepts only `.md`, `.markdown`, `.mdown`, `.mkd`, `.mdx`, max 64 MB. Reads, renders and sanitizes off the main thread. Invalid UTF-8 is replaced and flagged with `lossy`. |
+| `read_source`        | `path: string`                         | `DocumentSource` | Raw file text for the editor; same path and extension checks as `open_document`.                                                                                                                    |
+| `render_source`      | `path, source, options`                | `RenderedSource` | Renders unsaved editor text. Nothing is read from or written to disk; `path` only selects the flavor (Markdown or MDX).                                                                             |
+| `save_document`      | `path, content, options`               | `OpenedDocument` | Writes the file and returns it re-rendered (see [Saving](#saving)). Refreshes the watcher signature so the app's own write is not reported as an external change.                                   |
+| `scan_folder`        | `path: string, showAllFiles: boolean`  | `DirectoryTree`  | Recursive listing (see [Folder mode](#folder-mode)).                                                                                                                                                |
+| `check_files`        | `paths: string[]`                      | `boolean[]`      | Whether each path exists and is a file. Used for the recent files list.                                                                                                                             |
+| `watch_file`         | `path: string`                         | `void`           | Reference-counted.                                                                                                                                                                                  |
+| `unwatch_file`       | `path: string`                         | `void`           |                                                                                                                                                                                                     |
+| `take_startup_paths` | —                                      | `string[]`       | Absolute file/folder paths from the command line; returned once.                                                                                                                                    |
+| `set_menu_visible`   | `visible: boolean`                     | `void`           | Hides the native menu in reading mode.                                                                                                                                                              |
 
 `OpenedDocument` contains the canonical `path`, `name`, `size`, `modifiedMs`,
-the sanitized `html`, the `headings` outline, `wordCount` and `lossy`.
+the sanitized `html`, the `headings` outline, `wordCount`, `lossy`, the
+`flavor` (`markdown` or `mdx`) and `simplified` (MDX only: something was
+removed before rendering).
 
 No command accepts arbitrary paths for reading arbitrary content: documents must
 be Markdown files and folder scans only return names and paths.
@@ -425,6 +432,64 @@ A single delegated click handler on the viewer decides what a link does:
 Middle-click behaves like click. Right-click opens a custom context menu (copy,
 copy link, open link, copy image address, open image, select all).
 
+## MDX documents
+
+`.mdx` is Markdown plus JavaScript: ESM `import`/`export` statements, JSX
+components and `{expression}` interpolation. Rendering it faithfully means
+evaluating code that came out of a document, which this app never does. Instead
+`mdv-core::mdx` removes the MDX-only syntax before the text enters the normal
+Markdown pipeline, and the document is flagged `simplified` so the viewer can
+say what happened.
+
+The transformation is textual and deliberately conservative:
+
+- fenced and indented code blocks, and inline code spans, are never touched — so
+  documentation _about_ MDX keeps its examples intact;
+- paired components keep their inner Markdown (`<Note>**careful**</Note>`
+  renders as bold text), self-closing components are dropped;
+- `{/* comments */}` are removed, while `{expressions}` are left as written,
+  since showing them literally loses less than deleting them;
+- anything ambiguous (an unterminated tag or fence, a sentence that begins with
+  the word "import") is left alone, which also makes the pass idempotent;
+- every scan is linear in the length of the source.
+
+Everything else — the viewer, the editor, search, the outline — treats an MDX
+document exactly like a Markdown one.
+
+## Editing and saving
+
+Editing is an explicit mode, not the default: the app stays a reader, and
+nothing about the reading path changes when the editor is unused.
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant UI as Editor (textarea)
+    participant S as documentsStore
+    participant R as Rust
+
+    U->>UI: Ctrl+E
+    UI->>R: read_source(path)
+    R-->>S: raw text → draft + savedText
+    U->>UI: types
+    UI->>S: setDraft → dirty = draft ≠ savedText
+    U->>UI: Ctrl+S
+    UI->>R: save_document(path, content, options)
+    R->>R: temp file → fsync → rename
+    R->>R: refresh watcher signature
+    R-->>S: OpenedDocument (fresh html, size, mtime)
+    S->>S: savedText = content, dirty = false, revision++
+    U->>UI: Esc
+    UI->>R: render_source(draft) when still dirty
+    R-->>S: preview of the unsaved text
+```
+
+A draft is only ever discarded after the user agrees. Closing a tab, closing
+several tabs, reloading, quitting the app, and an external change to a file
+being edited all ask first; with auto-reload on, a dirty tab is still never
+reloaded behind the user's back. Saving is the only write the app performs:
+there is no autosave, no "Save As" and no file creation.
+
 ## Large documents
 
 | Size           | Strategy                                                                                                                                                                                                                                                               |
@@ -533,7 +598,18 @@ Defense in depth:
    allows only what the UI uses. `freezePrototype` is enabled so prototype
    pollution cannot tamper with the IPC bridge.
 5. **Scoped local image access.** `mdasset` serves image files only, ≤ 50 MB.
-6. **Controlled navigation.** Links never navigate the WebView. External URLs
+6. **A single, narrow write path.** `save_document` is the only command that
+   writes. It canonicalizes the path _before_ validating it, so the checks apply
+   to the real target rather than to a symlink's name, and it refuses anything
+   that is not an existing Markdown file. It cannot create files, so neither a
+   document nor a stale path in the frontend can make the app write somewhere
+   the user did not open. The write goes to a temporary file in the same
+   directory, is flushed, and is then renamed into place, so an interrupted save
+   leaves the original intact.
+7. **MDX is never executed.** `.mdx` documents are stripped of imports, exports
+   and JSX before rendering (`mdv-core::mdx`); no JavaScript from a document is
+   evaluated, and the viewer reports that the file was simplified.
+8. **Controlled navigation.** Links never navigate the WebView. External URLs
    go to the OS browser through the opener plugin, which is scoped to `http`,
    `https` and `mailto`; the user can require confirmation. Local non-Markdown
    files are revealed in the file manager, never opened.

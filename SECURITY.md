@@ -33,7 +33,9 @@ credit to the reporter, unless you prefer to stay anonymous.
 
 **Assets**
 
-- The user's files, other than the documents and images they choose to view.
+- The user's files: both their contents, and their integrity — the app can
+  write, so a document must never be able to cause a write the user did not ask
+  for.
 - The user's system: the ability to run programs or commands.
 - The user's privacy: which documents they read, and their network identity.
 - The integrity of the app's UI (a document must not impersonate app dialogs).
@@ -50,6 +52,8 @@ attachment, or a document linked from another document.
   `javascript:` URLs, SVG, iframes, `data:` documents).
 - Access to Tauri IPC or native APIs from document content.
 - Reading local files through links, images or the local image protocol.
+- Writing to files other than the document the user explicitly saved.
+- Code execution through MDX (`import`, JSX components, `{expressions}`).
 - Launching programs through links to local executables or custom URL schemes.
 - Navigating the app's WebView to attacker-controlled content.
 - UI spoofing through CSS or app class names.
@@ -124,11 +128,11 @@ network requests except to load images.
 ### Least-privilege native access
 
 - The frontend has **no filesystem plugin and no shell plugin**. It can only
-  call a small set of app commands: open a Markdown document, list a folder,
-  check whether files exist, watch/unwatch a file, read startup paths and hide
-  the menu.
-- `open_document` canonicalizes the path, accepts only `.md`, `.markdown`,
-  `.mdown` and `.mkd` files, and refuses files over 64 MB.
+  call a small set of app commands: open a Markdown document, read its source,
+  render unsaved text, save a document, list a folder, check whether files
+  exist, watch/unwatch a file, read startup paths and hide the menu.
+- `open_document` and `read_source` canonicalize the path, accept only `.md`,
+  `.markdown`, `.mdown`, `.mkd` and `.mdx` files, and refuse files over 64 MB.
 - `scan_folder` returns names and paths only, skips hidden entries, does not
   follow directory symlinks, and is bounded in depth and entry count.
 - The Tauri capability file grants the main window only the permissions the UI
@@ -137,6 +141,32 @@ network requests except to load images.
   the IPC bridge.
 - The app runs as a single instance; files passed by a second launch are
   routed through the same validation as any other open.
+
+### Writing files
+
+Saving is the only operation that writes, and it is deliberately narrow:
+
+- `save_document` canonicalizes the path **before** validating it, so the checks
+  apply to the real target and a symlink named `notes.md` cannot redirect a
+  write to the file it points at.
+- It refuses anything that is not an already-existing Markdown file. The app
+  cannot create files, so there is no "Save As" and no way for a document, or a
+  stale path held by the UI, to write to a new location.
+- Content is written to a temporary file in the same directory, flushed to disk
+  and then renamed over the original, so an interrupted or failed save leaves
+  the previous content intact. On Unix the file's permissions are preserved.
+- Content over 64 MB is refused, as on the read path.
+- A save refreshes the file watcher's signature, so the app's own write is not
+  reported back as an external change.
+
+### MDX
+
+`.mdx` documents are never executed. `import`/`export` statements, JSX
+components and JSX comments are removed textually before the text reaches the
+Markdown parser, and `{expressions}` are rendered as literal text rather than
+evaluated. Nothing in an MDX document reaches a JavaScript runtime, because the
+app does not have one for document content. The removal never touches code
+blocks, so a document that _documents_ MDX still shows its examples.
 
 ### Local images
 

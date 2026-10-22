@@ -2,13 +2,16 @@
 
 A fast, secure, offline desktop reader for Markdown files on Windows and Linux.
 
-Markdown Viewer is a reader, not an editor. It opens `.md` files and makes them
-comfortable to read: clean typography, syntax-highlighted code, a live table of
-contents, tabs, folder browsing and automatic reloads when a file changes on disk.
-It works fully offline and treats every document as untrusted input.
+Markdown Viewer is a reader first. It opens `.md` and `.mdx` files and makes
+them comfortable to read: clean typography, syntax-highlighted code, a live
+table of contents, tabs, folder browsing and automatic reloads when a file
+changes on disk. When you need to fix a typo, an opt-in editor saves straight
+back to the file. It works fully offline and treats every document as untrusted
+input.
 
 ## Contents
 
+- [Screenshots](#screenshots)
 - [Features](#features)
 - [Supported platforms](#supported-platforms)
 - [Installation](#installation)
@@ -26,6 +29,16 @@ It works fully offline and treats every document as untrusted input.
 - [Contributing](#contributing)
 - [License](#license)
 
+## Screenshots
+
+| Reading (dark)                                                                                                                   | Reading (light)                                                                                                  |
+| -------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| ![Reading a document in the dark theme, with the outline in the sidebar and highlighted code](docs/screenshots/reading-dark.png) | ![The same document in the light theme, with the folder tree in the sidebar](docs/screenshots/reading-light.png) |
+
+| Editing                                                                             | MDX                                                                                                                |
+| ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| ![The editor open on a document with unsaved changes](docs/screenshots/editing.png) | ![An .mdx document rendered, with a notice that imports and components are not rendered](docs/screenshots/mdx.png) |
+
 ## Features
 
 **Reading**
@@ -33,6 +46,9 @@ It works fully offline and treats every document as untrusted input.
 - GitHub Flavored Markdown: tables, task lists, strikethrough, autolinks,
   footnotes, heading anchors and GitHub alerts (`[!NOTE]`, `[!TIP]`,
   `[!IMPORTANT]`, `[!WARNING]`, `[!CAUTION]`).
+- `.mdx` files open and render their Markdown. Imports, exports and JSX
+  components are removed first (the text inside a component is kept) and the
+  document says so, because the viewer never executes code from a document.
 - Safe inline HTML such as `<details>`, `<summary>`, `<kbd>`, `<mark>`,
   `<sup>` and `<sub>` (sanitized; can be turned off).
 - YAML front matter is hidden from the rendered output.
@@ -58,6 +74,16 @@ It works fully offline and treats every document as untrusted input.
 - Recent files list with detection of files that were moved or deleted.
 - Links to other Markdown files open in a new tab, including `#heading`
   fragments; external links open in the system browser.
+
+**Editing**
+
+- `Ctrl+E` opens the current file in a plain Markdown editor; `Esc` returns to
+  reading with the preview updated from your draft.
+- `Ctrl+S` saves back to the file. Writes go to a temporary file first and are
+  renamed into place, so an interrupted save cannot truncate your document.
+- Unsaved changes are marked on the tab and in the editor status line, and you
+  are asked before anything would discard them — closing a tab, reloading,
+  quitting, or an external change to the same file.
 
 **Desktop integration**
 
@@ -263,8 +289,8 @@ git push origin v1.0.0
 
 ## File associations
 
-The installers register Markdown Viewer for `.md`, `.markdown`, `.mdown` and
-`.mkd` files:
+The installers register Markdown Viewer for `.md`, `.markdown`, `.mdown`,
+`.mkd` and `.mdx` files:
 
 - **Windows (NSIS):** the app appears under **Open with** for Markdown files.
   To make it the default, use **Open with → Choose another app → Always**, or
@@ -298,6 +324,8 @@ If the app is already running, the paths open in the existing window.
 | Open folder             | `Ctrl+Shift+O`                             |
 | Quick Open              | `Ctrl+P`                                   |
 | Reload document         | `Ctrl+R`, `F5`                             |
+| Edit document           | `Ctrl+E` (`Esc` to go back to reading)     |
+| Save document           | `Ctrl+S`                                   |
 | Close tab               | `Ctrl+W`                                   |
 | Close all tabs          | `Ctrl+Shift+W`                             |
 | Reopen closed tab       | `Ctrl+Shift+T`                             |
@@ -442,6 +470,12 @@ vulnerability.
 ## Known limitations
 
 - Math (LaTeX) and Mermaid diagrams are not rendered; they are shown as code.
+- `.mdx` files are rendered as Markdown only. Components are not executed, so
+  imports, exports and JSX tags are removed before rendering and `{expressions}`
+  are shown literally. Rendering MDX faithfully would mean running JavaScript
+  from the document, which this app does not do.
+- The editor is deliberately plain: no autosave, no "Save As", no creating new
+  files, and no syntax highlighting while editing.
 - Search does not find text that spans element boundaries (for example, a
   phrase that is partly bold).
 - Documents over 5 MB open without syntax highlighting.

@@ -8,6 +8,16 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-10-23
+
+### Added
+
+- In-app updates now work for Debian/Ubuntu installs. The app downloads the
+  signed `.deb`, verifies it, and hands it to the system package manager
+  through `pkexec`, so one password prompt replaces a manual download. A
+  dismissed prompt is reported as a cancellation, and a system without
+  `pkexec` keeps the downloaded package and offers to show it.
+
 ## [1.2.0] - 2026-10-23
 
 ### Added
@@ -140,7 +150,8 @@ Initial release.
 - Remote image loading can be disabled; insecure `http:` images are always
   blocked.
 
-[Unreleased]: https://github.com/ammarqaisar11a55/Markdown-Viewer/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/ammarqaisar11a55/Markdown-Viewer/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/ammarqaisar11a55/Markdown-Viewer/releases/tag/v1.3.0
 [1.2.0]: https://github.com/ammarqaisar11a55/Markdown-Viewer/releases/tag/v1.2.0
 [1.1.0]: https://github.com/ammarqaisar11a55/Markdown-Viewer/releases/tag/v1.1.0
 [1.0.0]: https://github.com/ammarqaisar11a55/Markdown-Viewer/releases/tag/v1.0.0

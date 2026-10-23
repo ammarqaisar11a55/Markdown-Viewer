@@ -5,18 +5,72 @@ import { useDocuments } from '@/stores/documentsStore';
 import { updateSettings } from '@/stores/settingsStore';
 import { useToasts } from '@/stores/toastStore';
 import { INITIAL_UPDATES_STATE, useUpdates } from '@/stores/updatesStore';
-import { makeDoc, mockBackend, resetAppState } from '@/test/state';
+import { flushPromises, makeDoc, mockBackend, resetAppState } from '@/test/state';
 import { setTauriRuntime } from '@/test/tauri';
 import type { DocumentTab } from '@/types';
 import {
   CHECK_INTERVAL_MS,
   checkForUpdates,
   installUpdate,
+  MANUAL_INSTALL_TOAST_ID,
   resetUpdateActionsForTests,
   scheduleStartupUpdateCheck,
   STARTUP_CHECK_DELAY_MS,
   UPDATE_TOAST_ID,
 } from './actions';
+import { UPDATE_PROGRESS_EVENT, type DebInstallOutcome } from './platform';
+
+/** The mock IPC's callback registry, which stands in for the Rust side. */
+interface MockInternals {
+  __TAURI_INTERNALS__: { runCallback: (id: number, data: unknown) => void };
+}
+
+type Handler = (args: Record<string, unknown>) => unknown;
+
+/** Where the Rust command writes the package it downloaded. */
+const DEB_PATH = '/tmp/markdown-viewer-update.7.1/markdown-viewer_1.2.0_amd64.deb';
+
+/** Id of the progress listener `installDebUpdate` registered. */
+let progressListener: number | null = null;
+
+/** Stands in for the event plugin: remembers who listens for progress. */
+function captureListener(args: Record<string, unknown>): number {
+  if (args.event === UPDATE_PROGRESS_EVENT && typeof args.handler === 'number') {
+    progressListener = args.handler;
+  }
+  return 1;
+}
+
+/** Emits the progress events the Rust command emits while downloading. */
+function emitProgress(contentLength: number | null, chunks: number[]): void {
+  const id = progressListener;
+  if (id === null) throw new Error('nothing is listening for download progress');
+  const { runCallback } = (window as unknown as MockInternals).__TAURI_INTERNALS__;
+  const send = (payload: DownloadEvent) => {
+    runCallback(id, { event: UPDATE_PROGRESS_EVENT, id: 1, payload });
+  };
+  send({ event: 'Started', data: contentLength === null ? {} : { contentLength } });
+  for (const chunkLength of chunks) send({ event: 'Progress', data: { chunkLength } });
+  send({ event: 'Finished' });
+}
+
+/** Answers `install_deb_update` the way the Rust command does. */
+function debInstall(outcome: DebInstallOutcome, chunks = [60, 40]) {
+  return () => {
+    emitProgress(100, chunks);
+    return { outcome, version: '1.2.0', path: DEB_PATH };
+  };
+}
+
+/** An IPC mock for an app that was installed from a `.deb`. */
+function debBackend(handlers: Record<string, Handler>) {
+  return mockBackend({
+    install_flavor: () => 'deb',
+    'plugin:event|listen': captureListener,
+    'plugin:updater|check': () => metadata(),
+    ...handlers,
+  });
+}
 
 const MANIFEST_MISSING = 'Could not fetch a valid release JSON from the remote';
 
@@ -90,6 +144,7 @@ const titles = () => useToasts.getState().toasts.map((t) => t.title);
 beforeEach(() => {
   resetAppState();
   resetUpdateActionsForTests();
+  progressListener = null;
   useUpdates.setState({ ...INITIAL_UPDATES_STATE });
   setTauriRuntime(true);
 });
@@ -286,5 +341,117 @@ describe('installUpdate', () => {
     await expect(installUpdate()).resolves.toBeUndefined();
     expect(backend.callsOf('plugin:updater|download_and_install')).toEqual([]);
     expect(backend.callsOf('plugin:process|restart')).toEqual([]);
+  });
+});
+
+describe('installUpdate on a .deb install', () => {
+  it('says up front that installing needs permission', async () => {
+    debBackend({});
+
+    await checkForUpdates({ manual: true });
+
+    expect(useToasts.getState().toasts[0]?.description).toBe(
+      'Installing it asks for your permission, then restarts Markdown Viewer.',
+    );
+  });
+
+  it('hands the package to the system installer, with the same progress', async () => {
+    const backend = debBackend({
+      install_deb_update: debInstall('installed'),
+      'plugin:dialog|message': dialogs({ restart: true }),
+    });
+
+    await checkForUpdates({ manual: true });
+    await installUpdate();
+
+    expect(backend.callsOf('install_deb_update')).toHaveLength(1);
+    expect(backend.callsOf('plugin:updater|download_and_install')).toEqual([]);
+    expect(useUpdates.getState()).toMatchObject({
+      status: 'installing',
+      downloaded: 100,
+      contentLength: 100,
+    });
+    expect(backend.callsOf('plugin:process|restart')).toHaveLength(1);
+  });
+
+  it('never restarts while a tab has unsaved changes', async () => {
+    const backend = debBackend({
+      install_deb_update: debInstall('installed'),
+      'plugin:dialog|message': dialogs({ restart: true, discard: false }),
+    });
+    useDocuments.setState({ tabs: [dirtyTab()], activeId: 'dirty' });
+
+    await checkForUpdates({ manual: true });
+    await installUpdate();
+
+    expect(backend.callsOf('plugin:process|restart')).toHaveLength(0);
+    expect(titles()).toEqual(['Update installed.']);
+    expect(useUpdates.getState().status).toBe('installing');
+  });
+
+  it('treats a dismissed permission prompt as a cancellation, not an error', async () => {
+    const backend = debBackend({ install_deb_update: debInstall('cancelled') });
+
+    await checkForUpdates({ manual: true });
+    await installUpdate();
+
+    expect(useUpdates.getState()).toMatchObject({
+      status: 'available',
+      version: '1.2.0',
+      error: null,
+    });
+    expect(titles()).toEqual(['Update cancelled.']);
+    expect(backend.callsOf('plugin:process|restart')).toEqual([]);
+  });
+
+  it('offers the downloaded package when it cannot ask for permission', async () => {
+    const backend = debBackend({ install_deb_update: debInstall('installerMissing') });
+
+    await checkForUpdates({ manual: true });
+    await installUpdate();
+
+    const [item] = useToasts.getState().toasts;
+    expect(item).toMatchObject({
+      id: MANUAL_INSTALL_TOAST_ID,
+      variant: 'warning',
+      title: 'Version 1.2.0 is downloaded.',
+      durationMs: null,
+    });
+    expect(item?.actions.map((action) => action.label)).toEqual(['Show File', 'Later']);
+
+    item?.actions[0]?.onClick();
+    await flushPromises();
+    expect(backend.callsOf('plugin:opener|reveal_item_in_dir')[0]?.args.paths).toEqual([DEB_PATH]);
+    // The update stays on offer, so it can be installed from Settings later.
+    expect(useUpdates.getState().status).toBe('available');
+  });
+
+  it('explains a failing package installer without its own words', async () => {
+    const backend = debBackend({
+      install_deb_update: rejectWith('dpkg: error processing archive'),
+    });
+
+    await checkForUpdates({ manual: true });
+    await installUpdate();
+
+    expect(useUpdates.getState().status).toBe('error');
+    expect(titles()).toEqual(['Could not install the update.']);
+    expect(backend.callsOf('plugin:process|restart')).toEqual([]);
+  });
+
+  it('leaves an AppImage to the updater plugin', async () => {
+    const backend = mockBackend({
+      install_flavor: () => 'appImage',
+      'plugin:updater|check': () => metadata(),
+      'plugin:updater|download_and_install': downloadAndInstall(100, [100]),
+      'plugin:dialog|message': dialogs({ restart: true }),
+    });
+
+    await checkForUpdates({ manual: true });
+    await installUpdate();
+
+    expect(backend.callsOf('plugin:updater|download_and_install')).toHaveLength(1);
+    expect(backend.callsOf('install_deb_update')).toEqual([]);
+    expect(backend.callsOf('plugin:process|restart')).toHaveLength(1);
   });
 });

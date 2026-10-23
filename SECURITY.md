@@ -183,6 +183,17 @@ signature does not verify is rejected before anything is installed, so a
 compromised download host, a hijacked DNS answer or a tampered release asset
 cannot push code into the app.
 
+A Debian install is updated differently, because the app runs as you and the
+installed files belong to root. The app downloads the signed `.deb`, verifies
+its signature before a single byte is written, saves it to a directory it
+creates for the purpose (mode `0700`, the file `0644`, created exclusively), and
+then runs `pkexec apt-get install` with a **fixed argument vector** — no shell,
+no arguments derived from the document, the network or the UI, and standard
+input closed so nothing can prompt on a terminal the app does not own.
+Elevation is performed by polkit, which asks you to confirm; the app never
+holds root privileges itself. If `pkexec` is unavailable, the package is left
+for you to install by hand rather than installed some other way.
+
 Update metadata is fetched over HTTPS from the project's GitHub releases.
 Checking happens in the Rust layer, not in the document webview, so no document
 can observe or influence it. Installing is always an explicit user action, and

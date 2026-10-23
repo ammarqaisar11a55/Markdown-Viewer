@@ -528,6 +528,15 @@ sequenceDiagram
     A->>U: relaunch()
 ```
 
+On Linux the install flavor decides the path. An AppImage is replaced by the
+updater plugin; a `.deb` cannot be, so the Rust side re-checks the manifest with
+the `linux-x86_64-deb` target, downloads and verifies that package, and hands it
+to `pkexec apt-get install`. Download progress reaches the UI as the
+`update-progress` event in the same shape the plugin emits, so one handler
+drives both paths. The outcome is `installed`, `cancelled` (the user dismissed
+the authorisation prompt) or `installerMissing` (no `pkexec`; the package is
+kept and the app offers to reveal it).
+
 Automatic checks are silent unless there is something to report, run at most
 once per 24 hours (the timestamp is persisted), and start a few seconds after
 launch so they never delay the window. Manual checks always say what happened,

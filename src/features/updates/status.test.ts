@@ -1,5 +1,5 @@
 import { INITIAL_UPDATES_STATE, type UpdatesData } from '@/stores/updatesStore';
-import { downloadPercent, formatUpdateStatus } from './status';
+import { downloadPercent, formatUpdateStatus, installHint } from './status';
 
 const state = (patch: Partial<UpdatesData>): UpdatesData => ({
   ...INITIAL_UPDATES_STATE,
@@ -51,5 +51,19 @@ describe('formatUpdateStatus', () => {
     expect(downloadPercent({ downloaded: 10, contentLength: null })).toBeNull();
     expect(downloadPercent({ downloaded: 10, contentLength: 0 })).toBeNull();
     expect(downloadPercent({ downloaded: 30, contentLength: 10 })).toBe(100);
+  });
+});
+
+describe('installHint', () => {
+  it('says what installing does on this kind of installation', () => {
+    expect(installHint('deb')).toBe(
+      'Updates install through your system package manager, which asks for your permission.',
+    );
+    expect(installHint('appImage')).toBe('Updates replace the AppImage this app runs from.');
+  });
+
+  it('stays quiet when there is nothing to explain', () => {
+    expect(installHint('other')).toBeNull();
+    expect(installHint(null)).toBeNull();
   });
 });

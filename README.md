@@ -96,6 +96,9 @@ input.
   demand and always reports the result.
 - Updates download and install in place, with progress, and ask before
   restarting — a restart is refused while a document has unsaved changes.
+- On a Debian/Ubuntu install the app cannot write to `/usr` itself, so it hands
+  the downloaded package to the system installer: you confirm once with your
+  password and `apt` does the rest.
 - Every update is verified against the signing key built into the app, so only
   releases signed by the maintainer can install. Automatic checks can be turned
   off in Settings.
@@ -505,8 +508,10 @@ vulnerability.
 - macOS is not packaged yet.
 - In-app updates work from 1.2.0 onwards: earlier builds have no updater, so
   upgrading to 1.2.0 is a manual download.
-- The Debian package is not updated in place by the in-app updater (`apt` owns
-  those files); the AppImage and the Windows installer are.
+- Updating a Debian package needs your password, because `apt` owns the
+  installed files; the AppImage and the Windows installer update without one.
+  If `pkexec` is missing the app downloads the package and shows it to you
+  instead of installing it.
 
 ## Contributing
 

@@ -12,6 +12,8 @@ const COMMANDS: &[&str] = &[
     "unwatch_file",
     "take_startup_paths",
     "set_menu_visible",
+    "install_flavor",
+    "install_deb_update",
 ];
 
 fn main() {

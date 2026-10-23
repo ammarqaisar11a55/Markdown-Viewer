@@ -1,5 +1,6 @@
 // Status line shown in the Settings dialog, derived from the updates store.
 import type { UpdatesData } from '@/stores/updatesStore';
+import type { InstallFlavor } from './platform';
 
 const dateFormat = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' });
 
@@ -10,6 +11,23 @@ export function downloadPercent(
   const { downloaded, contentLength } = state;
   if (contentLength === null || contentLength <= 0) return null;
   return Math.min(100, Math.round((downloaded / contentLength) * 100));
+}
+
+/**
+ * How an update installs itself on this kind of installation, or `null` while
+ * it is unknown and when there is nothing worth saying — the updater simply
+ * replaces a Windows installation, and a browser has nothing to install.
+ */
+export function installHint(flavor: InstallFlavor | null): string | null {
+  switch (flavor) {
+    case 'deb':
+      return 'Updates install through your system package manager, which asks for your permission.';
+    case 'appImage':
+      return 'Updates replace the AppImage this app runs from.';
+    case 'other':
+    case null:
+      return null;
+  }
 }
 
 export function formatUpdateStatus(state: UpdatesData): string {

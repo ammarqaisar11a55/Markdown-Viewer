@@ -4,6 +4,7 @@ mod commands;
 mod menu;
 mod protocol;
 mod startup;
+mod updates;
 mod watcher;
 
 use tauri::Manager;
@@ -78,6 +79,8 @@ pub fn run() {
             commands::unwatch_file,
             commands::take_startup_paths,
             commands::set_menu_visible,
+            updates::install_flavor,
+            updates::install_deb_update,
         ])
         .run(tauri::generate_context!());
 

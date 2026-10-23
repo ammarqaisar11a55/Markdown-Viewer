@@ -1,6 +1,7 @@
 import { checkForUpdates, installUpdate } from '@/features/updates/actions';
-import { downloadPercent, formatUpdateStatus } from '@/features/updates/status';
+import { downloadPercent, formatUpdateStatus, installHint } from '@/features/updates/status';
 import { useAppVersion } from '@/features/updates/useAppVersion';
+import { useInstallFlavor } from '@/features/updates/useInstallFlavor';
 import { useUpdates } from '@/stores/updatesStore';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
@@ -14,12 +15,15 @@ export function UpdatesSection() {
   const state = useUpdates();
   const busy = BUSY.has(state.status);
   const percent = state.status === 'downloading' ? downloadPercent(state) : null;
+  // The hint joins the status line, so it also describes the button beside it.
+  const hint = installHint(useInstallFlavor());
+  const status = formatUpdateStatus(state);
 
   return (
     <SettingSection title="Updates">
       <SettingRow
         label={version === null ? 'Markdown Viewer' : `Markdown Viewer ${version}`}
-        description={formatUpdateStatus(state)}
+        description={hint === null ? status : `${status} ${hint}`}
       >
         {() =>
           state.status === 'available' ? (

@@ -6,11 +6,22 @@ import { toAppError } from '@/lib/errors';
 import { confirmDialog } from '@/lib/platform/dialogs';
 import { isTauri } from '@/lib/platform/ipc';
 import { logger } from '@/lib/platform/logger';
+import { revealInFolder } from '@/lib/platform/system';
 import { useSettings } from '@/stores/settingsStore';
 import { dismissToast, toast } from '@/stores/toastStore';
 import { hydrateUpdates, useUpdates } from '@/stores/updatesStore';
 import type { AppError } from '@/types';
-import { checkEndpoint, relaunchApp, type PendingUpdate } from './platform';
+import {
+  checkEndpoint,
+  installDebUpdate,
+  installFlavor,
+  relaunchApp,
+  resetUpdatePlatformForTests,
+  type DebUpdateReport,
+  type DownloadEvent,
+  type InstallFlavor,
+  type PendingUpdate,
+} from './platform';
 
 /** Automatic checks run at most once a day. */
 export const CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;
@@ -18,6 +29,14 @@ export const CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;
 export const STARTUP_CHECK_DELAY_MS = 5000;
 
 export const UPDATE_TOAST_ID = 'update-available';
+export const MANUAL_INSTALL_TOAST_ID = 'update-manual-install';
+
+/** What the user is in for when they press Install, per kind of installation. */
+const INSTALL_DESCRIPTION: Record<InstallFlavor, string> = {
+  appImage: 'Installing it restarts Markdown Viewer.',
+  deb: 'Installing it asks for your permission, then restarts Markdown Viewer.',
+  other: 'Installing it restarts Markdown Viewer.',
+};
 
 export interface CheckForUpdatesOptions {
   /** The user asked; report the result either way. */
@@ -54,14 +73,24 @@ function checkedRecently(): boolean {
   return lastCheckedAt !== null && Date.now() - lastCheckedAt < CHECK_INTERVAL_MS;
 }
 
-function announce(update: PendingUpdate): void {
+/** How the app was installed; falls back to the updater's own path if unknown. */
+async function currentFlavor(): Promise<InstallFlavor> {
+  try {
+    return await installFlavor();
+  } catch (err) {
+    logger.warn('Could not tell how Markdown Viewer was installed', err);
+    return 'other';
+  }
+}
+
+async function announce(update: PendingUpdate): Promise<void> {
   const notes = update.body?.trim() ?? '';
   useUpdates.getState().foundUpdate(update.version, notes === '' ? null : notes);
   toast({
     id: UPDATE_TOAST_ID,
     variant: 'info',
     title: `Version ${update.version} is available.`,
-    description: 'Installing it restarts Markdown Viewer.',
+    description: INSTALL_DESCRIPTION[await currentFlavor()],
     durationMs: null,
     actions: [
       { label: 'Install', primary: true, onClick: () => void installUpdate() },
@@ -129,7 +158,7 @@ export async function checkForUpdates({
 
   pending = update;
   logger.info(`Update ${update.version} is available`);
-  announce(update);
+  await announce(update);
 }
 
 /** Asks before the app restarts, and never while a draft is unsaved. */
@@ -143,7 +172,68 @@ async function confirmRestart(): Promise<boolean> {
   return restart && (await confirmQuit());
 }
 
-/** Downloads and installs the update found by the last check, then restarts. */
+/** Feeds the store from the download progress of either install path. */
+function trackProgress(event: DownloadEvent): void {
+  const { startDownload, addDownloaded, startInstall } = useUpdates.getState();
+  switch (event.event) {
+    case 'Started':
+      startDownload(event.data.contentLength ?? null);
+      break;
+    case 'Progress':
+      addDownloaded(event.data.chunkLength);
+      break;
+    case 'Finished':
+      startInstall();
+      break;
+  }
+}
+
+/**
+ * Puts an update that was downloaded but not installed back on offer, so the
+ * Settings dialog keeps showing it and the user can try again.
+ */
+function keepOnOffer(update: PendingUpdate): void {
+  const { notes, foundUpdate } = useUpdates.getState();
+  foundUpdate(update.version, notes);
+}
+
+/** The authorisation prompt was dismissed: nothing was installed, nothing broke. */
+function reportCancelled(update: PendingUpdate): void {
+  logger.info('The update was not authorised');
+  keepOnOffer(update);
+  toast({
+    variant: 'info',
+    title: 'Update cancelled.',
+    description: `Version ${update.version} was not installed. You can install it any time.`,
+  });
+}
+
+/** Nothing here can ask for permission, so the user finishes the job. */
+function reportManualInstall(update: PendingUpdate, path: string): void {
+  logger.warn('No authorisation helper is available; the package must be installed by hand');
+  keepOnOffer(update);
+  toast({
+    id: MANUAL_INSTALL_TOAST_ID,
+    variant: 'warning',
+    title: `Version ${update.version} is downloaded.`,
+    description:
+      'Markdown Viewer cannot ask for permission to install it on this system. Open the downloaded package yourself to finish updating.',
+    durationMs: null,
+    actions: [
+      { label: 'Show File', primary: true, onClick: () => void revealInFolder(path) },
+      { label: 'Later', onClick: () => dismissToast(MANUAL_INSTALL_TOAST_ID) },
+    ],
+  });
+}
+
+/**
+ * Installs the update found by the last check, then restarts.
+ *
+ * An AppImage or a Windows installation is replaced by the updater itself. A
+ * `.deb` cannot be: its files belong to the system package manager, so the
+ * signed package is handed to it instead (see `install_deb_update` in Rust),
+ * which may well be declined — that is a cancellation, not a failure.
+ */
 export async function installUpdate(): Promise<void> {
   const update = pending;
   if (update === null) {
@@ -153,23 +243,14 @@ export async function installUpdate(): Promise<void> {
   if (installing) return;
   installing = true;
   dismissToast(UPDATE_TOAST_ID);
-  const { startDownload, addDownloaded, startInstall, failUpdate } = useUpdates.getState();
+  dismissToast(MANUAL_INSTALL_TOAST_ID);
+  const { startDownload, startInstall, failUpdate } = useUpdates.getState();
   startDownload(null);
 
+  let report: DebUpdateReport | null = null;
   try {
-    await update.downloadAndInstall((event) => {
-      switch (event.event) {
-        case 'Started':
-          startDownload(event.data.contentLength ?? null);
-          break;
-        case 'Progress':
-          addDownloaded(event.data.chunkLength);
-          break;
-        case 'Finished':
-          startInstall();
-          break;
-      }
-    });
+    if ((await currentFlavor()) === 'deb') report = await installDebUpdate(trackProgress);
+    else await update.downloadAndInstall(trackProgress);
   } catch (err) {
     installing = false;
     const error = appError(
@@ -183,9 +264,16 @@ export async function installUpdate(): Promise<void> {
     return;
   }
 
+  installing = false;
+
+  if (report !== null && report.outcome !== 'installed') {
+    if (report.outcome === 'cancelled') reportCancelled(update);
+    else reportManualInstall(update, report.path);
+    return;
+  }
+
   startInstall();
   pending = null;
-  installing = false;
 
   if (!(await confirmRestart())) {
     toast({
@@ -213,6 +301,7 @@ export function scheduleStartupUpdateCheck(): void {
 /** Test helper: forget module-level bookkeeping. */
 export function resetUpdateActionsForTests(): void {
   if (startupTimer !== null) clearTimeout(startupTimer);
+  resetUpdatePlatformForTests();
   startupTimer = null;
   pending = null;
   checking = false;

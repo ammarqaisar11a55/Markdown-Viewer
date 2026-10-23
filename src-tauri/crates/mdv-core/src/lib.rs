@@ -9,6 +9,7 @@ pub mod cli;
 pub mod document;
 pub mod error;
 pub mod fs;
+pub mod install;
 pub mod markdown;
 pub mod mdx;
 pub mod media;

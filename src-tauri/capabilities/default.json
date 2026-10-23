@@ -36,6 +36,8 @@
     "allow-watch-file",
     "allow-unwatch-file",
     "allow-take-startup-paths",
-    "allow-set-menu-visible"
+    "allow-set-menu-visible",
+    "allow-install-flavor",
+    "allow-install-deb-update"
   ]
 }

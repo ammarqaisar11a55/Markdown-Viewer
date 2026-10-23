@@ -21,6 +21,7 @@ import {
   closeAllTabs,
   closeOtherTabs,
   closeTab,
+  createFileDialog,
   dismissExternalChange,
   handleFileChanged,
   openDocument,
@@ -782,5 +783,166 @@ describe('unsaved-change guards', () => {
       options: { allowHtml: false },
     });
     expect(tabs()[0]).toMatchObject({ dirty: true, draft: 'draft text' });
+  });
+});
+
+describe('createFileDialog', () => {
+  interface CreateState {
+    chosen: string | null;
+    created: string[];
+    existing: string[];
+  }
+
+  function createBackend(chosen: string | null) {
+    setTauriRuntime(true);
+    const state: CreateState = { chosen, created: [], existing: [] };
+    const backend = mockBackend({
+      'plugin:dialog|save': () => state.chosen,
+      create_document: ({ path }) => {
+        const target = path as string;
+        if (state.existing.includes(target)) throwFsError('alreadyExists', 'EEXIST');
+        state.created.push(target);
+        return makeDoc(target, { size: 0, html: '', wordCount: 0 });
+      },
+      read_source: ({ path }) => ({
+        path: path as string,
+        name: 'untitled.md',
+        size: 0,
+        modifiedMs: 1,
+        content: '',
+        lossy: false,
+      }),
+      scan_folder: ({ path }) => folderTree(path as string),
+    });
+    return { ...backend, state };
+  }
+
+  function folderTree(root: string): DirectoryTree {
+    return {
+      markdownFileCount: 1,
+      truncated: false,
+      root: {
+        name: 'project',
+        path: root,
+        kind: 'directory',
+        isMarkdown: false,
+        children: [
+          { name: 'untitled.md', path: `${root}/untitled.md`, kind: 'file', isMarkdown: true },
+        ],
+      },
+    };
+  }
+
+  it('does nothing at all when the dialog is cancelled', async () => {
+    const backend = createBackend(null);
+    await createFileDialog();
+    expect(backend.callsOf('create_document')).toHaveLength(0);
+    expect(tabs()).toHaveLength(0);
+    expect(toasts()).toHaveLength(0);
+  });
+
+  it('is a no-op outside Tauri', async () => {
+    const backend = createBackend('/d/untitled.md');
+    setTauriRuntime(false);
+    await createFileDialog();
+    expect(backend.callsOf('plugin:dialog|save')).toHaveLength(0);
+    expect(tabs()).toHaveLength(0);
+  });
+
+  it('opens the new file in a tab that is already in edit mode', async () => {
+    const backend = createBackend('/d/untitled.md');
+    await createFileDialog();
+    expect(backend.callsOf('create_document')[0]?.args).toEqual({
+      path: '/d/untitled.md',
+      options: { allowHtml: true },
+    });
+    expect(tabs()).toHaveLength(1);
+    expect(tabs()[0]).toMatchObject({
+      path: '/d/untitled.md',
+      name: 'untitled.md',
+      status: 'ready',
+      editing: true,
+      draft: '',
+      savedText: '',
+      dirty: false,
+    });
+    expect(useDocuments.getState().activeId).toBe(tabs()[0]!.id);
+    expect(useRecent.getState().items.map((i) => i.path)).toEqual(['/d/untitled.md']);
+  });
+
+  it('offers the invoking folder, and the active document’s folder otherwise', async () => {
+    const backend = createBackend('/notes/untitled.md');
+    await createFileDialog('/notes');
+    expect(backend.callsOf('plugin:dialog|save')[0]?.args).toMatchObject({
+      options: { defaultPath: '/notes/untitled.md' },
+    });
+
+    // A second call with no folder follows the document opened by the first.
+    backend.state.chosen = '/notes/second.md';
+    await createFileDialog();
+    expect(backend.callsOf('plugin:dialog|save')[1]?.args).toMatchObject({
+      options: { defaultPath: '/notes/untitled.md' },
+    });
+    expect(backend.state.created).toEqual(['/notes/untitled.md', '/notes/second.md']);
+  });
+
+  it('appends .md to a name typed without an extension', async () => {
+    const backend = createBackend('/d/thoughts');
+    await createFileDialog();
+    expect(backend.callsOf('create_document')[0]?.args).toMatchObject({
+      path: '/d/thoughts.md',
+    });
+  });
+
+  it('shows a friendly toast when the name is taken and opens no tab', async () => {
+    const backend = createBackend('/d/notes.md');
+    backend.state.existing.push('/d/notes.md');
+    await createFileDialog();
+    expect(tabs()).toHaveLength(0);
+    expect(toasts().at(-1)).toMatchObject({
+      variant: 'error',
+      title: 'A file with this name already exists.',
+      description: 'Choose another name.',
+    });
+  });
+
+  it('reports an unwritable folder without opening a tab', async () => {
+    setTauriRuntime(true);
+    mockBackend({
+      'plugin:dialog|save': () => '/root/untitled.md',
+      create_document: () => throwFsError('permissionDenied'),
+    });
+    await createFileDialog();
+    expect(tabs()).toHaveLength(0);
+    expect(toasts().at(-1)).toMatchObject({
+      variant: 'error',
+      title: 'Unable to create this file.',
+      description: 'You don’t have permission to write to this folder.',
+    });
+  });
+
+  it('refreshes the open folder so the new file appears and is selected', async () => {
+    const backend = createBackend('/project/untitled.md');
+    useFolder.setState({
+      rootPath: '/project',
+      tree: { markdownFileCount: 0, truncated: false, root: folderTree('/project').root },
+      status: 'ready',
+      error: null,
+      expanded: { '/project': true },
+    });
+    await createFileDialog('/project');
+    expect(backend.callsOf('scan_folder').at(-1)?.args).toEqual({
+      path: '/project',
+      showAllFiles: false,
+    });
+    expect(useFolder.getState().expanded).toEqual({ '/project': true });
+    // The tree marks the file as selected through the active tab's path.
+    expect(getActiveTab()?.path).toBe('/project/untitled.md');
+  });
+
+  it('does not scan when no folder is open', async () => {
+    const backend = createBackend('/d/untitled.md');
+    await createFileDialog();
+    expect(backend.callsOf('scan_folder')).toHaveLength(0);
   });
 });

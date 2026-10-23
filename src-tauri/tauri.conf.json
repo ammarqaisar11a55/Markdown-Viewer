@@ -34,6 +34,7 @@
   },
   "bundle": {
     "active": true,
+    "createUpdaterArtifacts": true,
     "targets": ["deb", "appimage", "nsis"],
     "icon": [
       "icons/32x32.png",
@@ -77,6 +78,14 @@
         "installerIcon": "icons/icon.ico",
         "startMenuFolder": "Markdown Viewer"
       }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEJBQ0U0RjkzQTkxMDQxQzUKUldURlFSQ3BrMC9PdWhmemE3QkUrRVJrVElMbVdMWkZLb0VmVS9HR3dQVTNWSEVVQ25FK1VtYlIK",
+      "endpoints": [
+        "https://github.com/ammarqaisar11a55/Markdown-Viewer/releases/latest/download/latest.json"
+      ]
     }
   }
 }

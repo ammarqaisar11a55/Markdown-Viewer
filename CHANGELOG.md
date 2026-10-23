@@ -8,6 +8,30 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-23
+
+### Added
+
+- **New files** ([#3](https://github.com/ammarqaisar11a55/Markdown-Viewer/issues/3)).
+  `Ctrl+N`, a button in the folder panel and "New File Here" on a folder's
+  context menu create a Markdown file. The operating system's save dialog
+  chooses the location — the app never turns a path typed into its own UI into
+  a new file — and the file is created with create-new semantics, so an
+  existing file or symlink is refused rather than overwritten. The new document
+  opens in a tab, already in the editor.
+- **In-app updates** ([#4](https://github.com/ammarqaisar11a55/Markdown-Viewer/issues/4)).
+  The app checks for new releases in the background (at most once a day,
+  silently unless something is available), offers **Check for Updates** in
+  Settings, the Help menu and the About dialog, and downloads and installs an
+  update in place with progress. Updates must be signed with the project's key
+  or they are rejected; the restart that completes an update is refused while a
+  document has unsaved changes. Automatic checks can be switched off.
+
+### Changed
+
+- Releases are now signed and publish a `latest.json` manifest for the
+  updater.
+
 ## [1.1.0] - 2026-10-22
 
 ### Added
@@ -116,6 +140,7 @@ Initial release.
 - Remote image loading can be disabled; insecure `http:` images are always
   blocked.
 
-[Unreleased]: https://github.com/ammarqaisar11a55/Markdown-Viewer/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/ammarqaisar11a55/Markdown-Viewer/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/ammarqaisar11a55/Markdown-Viewer/releases/tag/v1.2.0
 [1.1.0]: https://github.com/ammarqaisar11a55/Markdown-Viewer/releases/tag/v1.1.0
 [1.0.0]: https://github.com/ammarqaisar11a55/Markdown-Viewer/releases/tag/v1.0.0

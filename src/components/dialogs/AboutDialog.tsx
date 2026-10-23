@@ -1,7 +1,5 @@
-import { getVersion } from '@tauri-apps/api/app';
-import { useEffect, useState } from 'react';
-import { isTauri } from '@/lib/platform/ipc';
-import { logger } from '@/lib/platform/logger';
+import { checkForUpdates } from '@/features/updates/actions';
+import { useAppVersion } from '@/features/updates/useAppVersion';
 import { useUi } from '@/stores/uiStore';
 import { AppMark } from '@/components/ui/AppMark';
 import { Button } from '@/components/ui/Button';
@@ -34,23 +32,7 @@ export function AboutDialog() {
 }
 
 function AboutContent() {
-  const [version, setVersion] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!isTauri()) return;
-    let cancelled = false;
-    getVersion().then(
-      (value) => {
-        if (!cancelled) setVersion(value);
-      },
-      (err: unknown) => {
-        logger.warn('Could not read the app version', err);
-      },
-    );
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const version = useAppVersion();
 
   return (
     <div className="flex flex-col items-center px-6 pt-8 pb-6 text-center">
@@ -61,6 +43,13 @@ function AboutContent() {
       <p className="selectable tabular mt-1 text-ui-sm text-fg-muted">
         {version ? `Version ${version}` : 'Development build'}
       </p>
+      <button
+        type="button"
+        className="mt-1 rounded-sm text-ui-sm text-link hover:text-link-hover hover:underline"
+        onClick={() => void checkForUpdates({ manual: true })}
+      >
+        Check for updates
+      </button>
       <p className="mt-4 max-w-72 text-ui text-fg-muted">
         A fast, secure, offline reader for Markdown files on Windows and Linux.
       </p>

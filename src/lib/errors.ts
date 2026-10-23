@@ -1,10 +1,11 @@
 // Maps technical failures to friendly, user-facing messages.
 import type { AppError, AppErrorKind, FsErrorKind, FsErrorPayload } from '@/types';
 
-export type ErrorContext = 'file' | 'folder' | 'save';
+export type ErrorContext = 'file' | 'folder' | 'save' | 'create';
 
 const FS_KINDS: readonly FsErrorKind[] = [
   'notFound',
+  'alreadyExists',
   'permissionDenied',
   'notAFile',
   'notADirectory',
@@ -19,6 +20,10 @@ const FILE_COPY: Copy = {
   notFound: {
     title: 'Unable to open this file.',
     description: 'The file may have been moved or deleted.',
+  },
+  alreadyExists: {
+    title: 'Unable to open this file.',
+    description: 'Another file is already in its place.',
   },
   permissionDenied: {
     title: 'Unable to open this file.',
@@ -55,6 +60,10 @@ const SAVE_COPY: Copy = {
     title: 'Unable to save this file.',
     description: 'The file or its folder may have been moved or deleted.',
   },
+  alreadyExists: {
+    title: 'Unable to save this file.',
+    description: 'Another file is already in its place.',
+  },
   permissionDenied: {
     title: 'Unable to save this file.',
     description: 'You don’t have permission to write to it.',
@@ -90,6 +99,10 @@ const FOLDER_COPY: Copy = {
     title: 'Unable to open this folder.',
     description: 'The folder may have been moved or deleted.',
   },
+  alreadyExists: {
+    title: 'Unable to open this folder.',
+    description: 'Another item is already in its place.',
+  },
   permissionDenied: {
     title: 'Unable to open this folder.',
     description: 'You don’t have permission to read it.',
@@ -120,6 +133,45 @@ const FOLDER_COPY: Copy = {
   },
 };
 
+const CREATE_COPY: Copy = {
+  notFound: {
+    title: 'Unable to create this file.',
+    description: 'The folder may have been moved or deleted.',
+  },
+  alreadyExists: {
+    title: 'A file with this name already exists.',
+    description: 'Choose another name.',
+  },
+  permissionDenied: {
+    title: 'Unable to create this file.',
+    description: 'You don’t have permission to write to this folder.',
+  },
+  notAFile: {
+    title: 'Unable to create this file.',
+    description: 'That name cannot be used for a file.',
+  },
+  notADirectory: {
+    title: 'Unable to create this file.',
+    description: 'Part of the path is not a folder.',
+  },
+  unsupportedType: {
+    title: 'Unable to create this file.',
+    description: 'Markdown Viewer creates .md, .markdown, .mdown, .mkd and .mdx files.',
+  },
+  tooLarge: {
+    title: 'Unable to create this file.',
+    description: 'Something went wrong. Please try again.',
+  },
+  io: {
+    title: 'Unable to create this file.',
+    description: 'Something went wrong while creating it. Please try again.',
+  },
+  unknown: {
+    title: 'Unable to create this file.',
+    description: 'The file could not be created. Please try again.',
+  },
+};
+
 export function isFsErrorPayload(value: unknown): value is FsErrorPayload {
   if (typeof value !== 'object' || value === null) return false;
   const { kind, message } = value as Record<string, unknown>;
@@ -145,6 +197,7 @@ const CONTEXT_COPY: Record<ErrorContext, Copy> = {
   file: FILE_COPY,
   folder: FOLDER_COPY,
   save: SAVE_COPY,
+  create: CREATE_COPY,
 };
 
 export function isAppError(value: unknown): value is AppError {

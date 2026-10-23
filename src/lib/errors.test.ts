@@ -17,16 +17,33 @@ describe('toAppError', () => {
     expect(error.description).toBe('The folder may have been moved or deleted.');
   });
 
-  it.each(['permissionDenied', 'tooLarge', 'unsupportedType', 'notADirectory', 'io'] as const)(
-    'gives %s a friendly message without technical details',
-    (kind) => {
-      const error = toAppError({ kind, message: 'os error 13 /secret/path' });
-      expect(error.kind).toBe(kind);
-      expect(error.title).not.toContain('os error');
-      expect(error.description).not.toContain('/secret/path');
-      expect(error.technical).toBe('os error 13 /secret/path');
-    },
-  );
+  it('uses create wording in the create context', () => {
+    const taken = toAppError({ kind: 'alreadyExists', message: 'EEXIST /d/a.md' }, 'create');
+    expect(taken).toEqual({
+      kind: 'alreadyExists',
+      title: 'A file with this name already exists.',
+      description: 'Choose another name.',
+      technical: 'EEXIST /d/a.md',
+    });
+    expect(toAppError({ kind: 'permissionDenied', message: 'x' }, 'create').title).toBe(
+      'Unable to create this file.',
+    );
+  });
+
+  it.each([
+    'alreadyExists',
+    'permissionDenied',
+    'tooLarge',
+    'unsupportedType',
+    'notADirectory',
+    'io',
+  ] as const)('gives %s a friendly message without technical details', (kind) => {
+    const error = toAppError({ kind, message: 'os error 13 /secret/path' });
+    expect(error.kind).toBe(kind);
+    expect(error.title).not.toContain('os error');
+    expect(error.description).not.toContain('/secret/path');
+    expect(error.technical).toBe('os error 13 /secret/path');
+  });
 
   it('maps unknown errors', () => {
     expect(toAppError(new TypeError('boom'))).toMatchObject({

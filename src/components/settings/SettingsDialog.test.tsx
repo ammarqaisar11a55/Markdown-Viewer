@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { resetSettings, updateSettings, useSettings } from '@/stores/settingsStore';
 import { useUi } from '@/stores/uiStore';
@@ -17,6 +17,7 @@ vi.mock('@/stores/settingsStore', async () => {
     autoReload: false,
     rememberRecent: true,
     showAllFiles: false,
+    autoCheckUpdates: true,
     syntaxHighlighting: true,
     lineNumbers: false,
     renderHtml: true,
@@ -48,12 +49,28 @@ describe('SettingsDialog', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('shows the three sections', () => {
+  it('shows every section', () => {
     render(<SettingsDialog />);
     expect(screen.getByRole('dialog', { name: 'Settings' })).toBeInTheDocument();
-    for (const name of ['Appearance', 'Behavior', 'Markdown']) {
+    for (const name of ['Appearance', 'Behavior', 'Updates', 'Markdown']) {
       expect(screen.getByRole('heading', { name })).toBeInTheDocument();
     }
+  });
+
+  it('offers a manual update check and the automatic-check switch', async () => {
+    const user = userEvent.setup();
+    render(<SettingsDialog />);
+    const section = screen.getByRole('region', { name: 'Updates' });
+    expect(within(section).getByText('Not checked yet.')).toBeInTheDocument();
+    expect(within(section).getByRole('button', { name: 'Check for Updates' })).toBeEnabled();
+
+    const auto = within(section).getByRole('switch', {
+      name: 'Check for updates automatically',
+    });
+    expect(auto).toBeChecked();
+    await user.click(auto);
+    expect(updateSettings).toHaveBeenCalledWith({ autoCheckUpdates: false });
+    expect(auto).not.toBeChecked();
   });
 
   it('switches the theme', async () => {

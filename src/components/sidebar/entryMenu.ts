@@ -1,4 +1,4 @@
-import { openDocument } from '@/features/documents/actions';
+import { createFileDialog, openDocument } from '@/features/documents/actions';
 import { logger } from '@/lib/platform/logger';
 import { copyText, revealInFolder } from '@/lib/platform/system';
 import type { ContextMenuItem } from '@/stores/contextMenuStore';
@@ -32,6 +32,17 @@ export function pathMenuItems(path: string): ContextMenuItem[] {
   return [
     { id: 'reveal', label: 'Reveal in Folder', onSelect: () => revealAction(path) },
     { id: 'copy-path', label: 'Copy Path', onSelect: () => copyPathAction(path) },
+  ];
+}
+
+/** Creates a file in `directory`; the save dialog still chooses the path. */
+export function newFileMenuItems(directory: string): ContextMenuItem[] {
+  return [
+    {
+      id: 'new-file',
+      label: 'New File Here',
+      onSelect: () => void createFileDialog(directory),
+    },
   ];
 }
 

@@ -18,6 +18,7 @@ documents are never allowed to act on the system.
 - [Markdown rendering pipeline](#markdown-rendering-pipeline)
 - [MDX documents](#mdx-documents)
 - [Editing and saving](#editing-and-saving)
+- [Updates](#updates)
 - [Large documents](#large-documents)
 - [Syntax highlighting](#syntax-highlighting)
 - [Search](#search)
@@ -192,6 +193,7 @@ names. Filesystem commands reject with `FsErrorPayload { kind, message }`, where
 | `read_source`        | `path: string`                         | `DocumentSource` | Raw file text for the editor; same path and extension checks as `open_document`.                                                                                                                    |
 | `render_source`      | `path, source, options`                | `RenderedSource` | Renders unsaved editor text. Nothing is read from or written to disk; `path` only selects the flavor (Markdown or MDX).                                                                             |
 | `save_document`      | `path, content, options`               | `OpenedDocument` | Writes the file and returns it re-rendered (see [Saving](#saving)). Refreshes the watcher signature so the app's own write is not reported as an external change.                                   |
+| `create_document`    | `path, options`                        | `OpenedDocument` | Creates an empty Markdown file with create-new semantics — an existing file or symlink is refused, never truncated — and returns it rendered. The path comes from the OS save dialog.               |
 | `scan_folder`        | `path: string, showAllFiles: boolean`  | `DirectoryTree`  | Recursive listing (see [Folder mode](#folder-mode)).                                                                                                                                                |
 | `check_files`        | `paths: string[]`                      | `boolean[]`      | Whether each path exists and is a file. Used for the recent files list.                                                                                                                             |
 | `watch_file`         | `path: string`                         | `void`           | Reference-counted.                                                                                                                                                                                  |
@@ -484,11 +486,54 @@ sequenceDiagram
     R-->>S: preview of the unsaved text
 ```
 
+New files follow the same rule from the other direction: the operating
+system's save dialog picks the destination, so the app never turns a path from
+its own UI into a new file. Rust canonicalizes the parent directory, joins only
+the chosen name, and creates the file exclusively — if anything is already
+there, the attempt fails instead of overwriting it. The new file opens in a tab
+and goes straight into the editor.
+
 A draft is only ever discarded after the user agrees. Closing a tab, closing
 several tabs, reloading, quitting the app, and an external change to a file
 being edited all ask first; with auto-reload on, a dirty tab is still never
 reloaded behind the user's back. Saving is the only write the app performs:
 there is no autosave, no "Save As" and no file creation.
+
+## Updates
+
+The app ships with the Tauri updater plugin and the project's **public**
+signing key. The release workflow signs every updater artifact with the private
+key (a GitHub Actions secret) and attaches a `latest.json` manifest to the
+release; the app points at
+`releases/latest/download/latest.json` and refuses anything whose signature does
+not verify against the embedded key.
+
+```mermaid
+sequenceDiagram
+    participant A as App (startup or manual)
+    participant G as GitHub releases
+    participant U as Updater (Rust)
+    participant W as User
+
+    A->>U: check()
+    U->>G: GET latest.json (HTTPS)
+    G-->>U: version, notes, signed artifact URLs
+    U-->>A: update or nothing
+    A->>W: quiet toast "Version X is available"
+    W->>A: Install
+    A->>U: downloadAndInstall(onProgress)
+    U->>U: verify signature against embedded public key
+    U-->>A: progress → installed
+    A->>W: confirm restart (refused while a draft is unsaved)
+    A->>U: relaunch()
+```
+
+Automatic checks are silent unless there is something to report, run at most
+once per 24 hours (the timestamp is persisted), and start a few seconds after
+launch so they never delay the window. Manual checks always say what happened,
+including "You're up to date". A missing `latest.json` — a release built before
+signing existed — counts as "no update", not an error. Outside Tauri the whole
+feature degrades to no-ops.
 
 ## Large documents
 
@@ -598,12 +643,13 @@ Defense in depth:
    allows only what the UI uses. `freezePrototype` is enabled so prototype
    pollution cannot tamper with the IPC bridge.
 5. **Scoped local image access.** `mdasset` serves image files only, ≤ 50 MB.
-6. **A single, narrow write path.** `save_document` is the only command that
-   writes. It canonicalizes the path _before_ validating it, so the checks apply
-   to the real target rather than to a symlink's name, and it refuses anything
-   that is not an existing Markdown file. It cannot create files, so neither a
-   document nor a stale path in the frontend can make the app write somewhere
-   the user did not open. The write goes to a temporary file in the same
+6. **Two narrow write paths.** `save_document` canonicalizes the path _before_
+   validating it, so the checks apply to the real target rather than to a
+   symlink's name, and it refuses anything that is not an existing Markdown
+   file. `create_document` only ever creates a new empty Markdown file, from a
+   path the operating system's save dialog produced, and refuses to overwrite
+   or follow anything that already exists. Neither a document nor a stale path
+   in the frontend can make the app write somewhere the user did not choose. The write goes to a temporary file in the same
    directory, is flushed, and is then renamed into place, so an interrupted save
    leaves the original intact.
 7. **MDX is never executed.** `.mdx` documents are stripped of imports, exports

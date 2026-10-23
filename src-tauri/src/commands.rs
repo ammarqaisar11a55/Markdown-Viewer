@@ -80,6 +80,34 @@ pub async fn save_document(
     log_failure("save", &path, result)
 }
 
+/// Creates a new, empty Markdown document and returns it rendered.
+///
+/// `path` must come from the operating system's own save dialog (see
+/// `pickNewMarkdownFile` in the frontend), never from a text field inside the
+/// app: this command is the whole reason the app can create a file at all, so
+/// the user — not a document, a link in one, or a stale path held by the UI —
+/// chooses where it goes.
+///
+/// It refuses, in [`mdv_core::create_document`]:
+///
+/// * a path whose extension is not a Markdown one (`unsupportedType`), so no
+///   other kind of file can be created;
+/// * a path that already exists, including a symlink (`alreadyExists`) — the
+///   file is created with `create_new`, so an existing document can never be
+///   truncated and a link can never be followed to its target;
+/// * a parent folder that is missing (`notFound`), is not a folder
+///   (`notADirectory`) or is not writable (`permissionDenied`); nothing is ever
+///   created recursively.
+///
+/// The file is created empty; putting content in it goes through the existing
+/// [`save_document`] path, which keeps a single, narrow place that writes bytes.
+#[tauri::command]
+pub async fn create_document(path: String, options: RenderOptions) -> Result<OpenedDocument, FsError> {
+    let target = PathBuf::from(&path);
+    let result = blocking(move || mdv_core::create_document(&target, &options)).await;
+    log_failure("create", &path, result)
+}
+
 #[tauri::command]
 pub async fn scan_folder(path: String, show_all_files: bool) -> Result<DirectoryTree, FsError> {
     let target = PathBuf::from(&path);

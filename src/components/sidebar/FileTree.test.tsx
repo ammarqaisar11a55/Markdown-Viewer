@@ -8,7 +8,10 @@ import { ContextMenu } from '@/components/ui/ContextMenu';
 import { installDomStubs } from '@/components/ui/testing';
 import { FileTreePanel } from './FileTreePanel';
 
-const documentActions = vi.hoisted(() => ({ openDocument: vi.fn(() => Promise.resolve()) }));
+const documentActions = vi.hoisted(() => ({
+  openDocument: vi.fn(() => Promise.resolve()),
+  createFileDialog: vi.fn(() => Promise.resolve()),
+}));
 vi.mock('@/features/documents/actions', () => documentActions);
 
 const folderActions = vi.hoisted(() => ({
@@ -100,6 +103,9 @@ describe('FileTreePanel', () => {
     expect(items.map((i) => i.textContent)).toEqual(['docs', 'README.md', 'logo.png']);
     expect(items[0]).toHaveAttribute('aria-expanded', 'false');
     expect(items[2]).toHaveAttribute('aria-disabled', 'true');
+
+    await user.click(screen.getByRole('button', { name: 'New file in this folder' }));
+    expect(documentActions.createFileDialog).toHaveBeenCalledWith('/project');
 
     await user.click(screen.getByRole('button', { name: 'Refresh folder' }));
     expect(folderActions.refreshFolder).toHaveBeenCalled();
@@ -209,6 +215,16 @@ describe('FileTreePanel', () => {
     expect(documentActions.openDocument).toHaveBeenCalledWith('/project/README.md', {
       newTab: true,
     });
+
+    fireEvent.contextMenu(screen.getByRole('treeitem', { name: 'docs' }));
+    expect(screen.getAllByRole('menuitem').map((i) => i.textContent)).toEqual([
+      'Expand',
+      'New File Here',
+      'Reveal in Folder',
+      'Copy Path',
+    ]);
+    await user.click(screen.getByRole('menuitem', { name: 'New File Here' }));
+    expect(documentActions.createFileDialog).toHaveBeenCalledWith('/project/docs');
 
     fireEvent.contextMenu(screen.getByRole('treeitem', { name: 'logo.png' }));
     expect(screen.getAllByRole('menuitem').map((i) => i.textContent)).toEqual([

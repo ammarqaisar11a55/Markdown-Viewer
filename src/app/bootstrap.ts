@@ -10,6 +10,7 @@ import { startWindowTitleSync } from '@/features/documents/windowTitle';
 import { refreshRecentExistence } from '@/features/recent/actions';
 import { restoreSession, startSessionPersistence } from '@/features/session/session';
 import { startSettingsEffects } from '@/features/settings/effects';
+import { scheduleStartupUpdateCheck } from '@/features/updates/actions';
 import { ensureWindowTracking } from '@/features/window/tracking';
 import { setHomeDir } from '@/lib/paths';
 import { takeStartupPaths } from '@/lib/platform/ipc';
@@ -109,4 +110,6 @@ export async function bootstrap(): Promise<void> {
     });
   }
   void refreshRecentExistence();
+  // Looks for a new version in the background, long after the window is usable.
+  await step('update check', scheduleStartupUpdateCheck);
 }

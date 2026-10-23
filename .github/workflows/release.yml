@@ -55,12 +55,33 @@ jobs:
 
       - run: npm ci
 
+      # `bundle.createUpdaterArtifacts` is on, so the bundler signs every update
+      # artifact and refuses to build without the private key. Checking first
+      # turns a confusing bundler failure near the end of the build into a clear
+      # message: add the two repository secrets, or turn the option off.
+      - name: Verify the updater signing secrets
+        shell: bash
+        env:
+          SIGNING_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          if [ -z "$SIGNING_KEY" ]; then
+            echo "::error::Missing repository secret TAURI_SIGNING_PRIVATE_KEY (and TAURI_SIGNING_PRIVATE_KEY_PASSWORD). They sign the updater artifacts and latest.json required by the in-app updater."
+            exit 1
+          fi
+
       - name: Build and publish release
         id: tauri
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Signs the update artifacts and lets the action attach `latest.json`,
+          # which `plugins > updater > endpoints` points at.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
+          # Both platform builds upload into the same release; the action merges
+          # their entries into one `latest.json`.
+          includeUpdaterJson: true
           tagName: ${{ env.TAG }}
           releaseName: Markdown Viewer ${{ env.TAG }}
           # Hyphenated, space-free asset names.

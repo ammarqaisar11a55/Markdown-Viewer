@@ -30,6 +30,16 @@ export function saveDocument(
   return invoke<OpenedDocument>('save_document', { path, content, options });
 }
 
+/**
+ * Creates an empty Markdown file and returns it rendered.
+ *
+ * `path` must come from the native save dialog (`pickNewMarkdownFile`); the
+ * command refuses an existing path rather than overwriting it.
+ */
+export function createDocument(path: string, options: RenderOptions): Promise<OpenedDocument> {
+  return invoke<OpenedDocument>('create_document', { path, options });
+}
+
 /** Renders unsaved text; `path` only selects the flavor, the file is not read. */
 export function renderSource(
   path: string,

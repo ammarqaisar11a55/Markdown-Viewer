@@ -1,5 +1,13 @@
-import { ChevronsDownUp, FolderOpen, FolderX, RefreshCw, TriangleAlert } from 'lucide-react';
+import {
+  ChevronsDownUp,
+  FilePlus,
+  FolderOpen,
+  FolderX,
+  RefreshCw,
+  TriangleAlert,
+} from 'lucide-react';
 import { getShortcutLabel } from '@/app/commands';
+import { createFileDialog } from '@/features/documents/actions';
 import {
   closeFolder,
   collapseAllFolders,
@@ -49,6 +57,13 @@ export function FileTreePanel() {
         <Tooltip label={displayPath(rootPath)} className="min-w-0 flex-1">
           <h2 className="min-w-0 truncate text-ui-sm font-semibold text-fg-muted">{name}</h2>
         </Tooltip>
+        <IconButton
+          size="sm"
+          label="New file in this folder"
+          shortcut={getShortcutLabel('file.new')}
+          icon={<FilePlus />}
+          onClick={() => void createFileDialog(rootPath)}
+        />
         <IconButton
           size="sm"
           label="Refresh folder"

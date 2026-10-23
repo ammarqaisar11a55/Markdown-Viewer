@@ -10,6 +10,7 @@ pub const MENU_ACTION_EVENT: &str = "menu-action";
 type Entry = Option<(&'static str, &'static str, Option<&'static str>)>;
 
 const FILE_MENU: &[Entry] = &[
+    Some(("file.new", "&New File…", Some("CmdOrCtrl+N"))),
     Some(("file.open", "&Open File…", Some("CmdOrCtrl+O"))),
     Some(("file.openFolder", "Open &Folder…", Some("CmdOrCtrl+Shift+O"))),
     Some(("file.quickOpen", "&Quick Open…", Some("CmdOrCtrl+P"))),
@@ -52,6 +53,7 @@ const VIEW_MENU: &[Entry] = &[
 const HELP_MENU: &[Entry] = &[
     Some(("app.shortcuts", "&Keyboard Shortcuts", Some("CmdOrCtrl+/"))),
     None,
+    Some(("app.checkUpdates", "Check for &Updates…", None)),
     Some(("app.about", "&About Markdown Viewer", None)),
 ];
 

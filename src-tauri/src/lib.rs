@@ -48,6 +48,10 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_notification::init())
+        // In-app updates: the updater fetches and verifies the signed release
+        // from the Rust side, `process` restarts the app once it is installed.
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .plugin(
             tauri_plugin_window_state::Builder::new()
                 .with_state_flags(StateFlags::SIZE | StateFlags::POSITION | StateFlags::MAXIMIZED)
@@ -67,6 +71,7 @@ pub fn run() {
             commands::read_source,
             commands::render_source,
             commands::save_document,
+            commands::create_document,
             commands::scan_folder,
             commands::check_files,
             commands::watch_file,

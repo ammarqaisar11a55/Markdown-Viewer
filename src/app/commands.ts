@@ -6,6 +6,7 @@ import {
   closeAllTabs,
   closeOtherTabs,
   closeTab,
+  createFileDialog,
   openFileDialog,
   reloadDocument,
   reopenClosedTab,
@@ -13,6 +14,7 @@ import {
   toggleEditing,
 } from '@/features/documents/actions';
 import { closeFolder, openFolderDialog } from '@/features/folder/actions';
+import { checkForUpdates } from '@/features/updates/actions';
 import { toAppError } from '@/lib/errors';
 import { logger } from '@/lib/platform/logger';
 import { resolveTheme } from '@/lib/platform/theme';
@@ -25,6 +27,7 @@ import { toast } from '@/stores/toastStore';
 import { useUi } from '@/stores/uiStore';
 
 export type CommandId =
+  | 'file.new'
   | 'file.open'
   | 'file.openFolder'
   | 'file.quickOpen'
@@ -49,6 +52,7 @@ export type CommandId =
   | 'app.settings'
   | 'app.shortcuts'
   | 'app.about'
+  | 'app.checkUpdates'
   | 'app.quit';
 
 export type CommandCategory = 'File' | 'Edit' | 'Tabs' | 'View' | 'App';
@@ -78,6 +82,13 @@ function withActiveTab(action: (id: string) => void | Promise<void>) {
 }
 
 export const commands: Record<CommandId, Command> = {
+  'file.new': {
+    id: 'file.new',
+    label: 'New File…',
+    shortcuts: ['Mod+N'],
+    category: 'File',
+    run: () => createFileDialog(),
+  },
   'file.open': {
     id: 'file.open',
     label: 'Open File…',
@@ -274,6 +285,13 @@ export const commands: Record<CommandId, Command> = {
     shortcuts: [],
     category: 'App',
     run: () => ui().setAboutOpen(true),
+  },
+  'app.checkUpdates': {
+    id: 'app.checkUpdates',
+    label: 'Check for Updates…',
+    shortcuts: [],
+    category: 'App',
+    run: () => checkForUpdates({ manual: true }),
   },
   'app.quit': {
     id: 'app.quit',

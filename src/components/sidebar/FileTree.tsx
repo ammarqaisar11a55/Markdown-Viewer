@@ -13,7 +13,7 @@ import { samePath } from '@/lib/paths';
 import { openContextMenu, type ContextMenuItem } from '@/stores/contextMenuStore';
 import { selectActiveTab, useDocuments } from '@/stores/documentsStore';
 import type { DirectoryEntry } from '@/types';
-import { openFileMenuItems, pathMenuItems } from './entryMenu';
+import { newFileMenuItems, openFileMenuItems, pathMenuItems } from './entryMenu';
 import { FileTreeNode } from './FileTreeNode';
 import { flattenTree, type VisibleNode } from './flattenTree';
 import { findByData } from '@/components/ui/dom';
@@ -70,6 +70,7 @@ export function FileTree({ root, label }: FileTreeProps) {
           toggleFolderExpanded(entry.path);
         },
       });
+      items.push(...newFileMenuItems(entry.path));
     } else if (entry.isMarkdown) {
       items.push(...openFileMenuItems(entry.path));
     }

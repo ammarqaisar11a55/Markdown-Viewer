@@ -5,7 +5,7 @@ use std::path::Path;
 
 use serde::Serialize;
 
-use crate::fs::{read_markdown_file, write_markdown_file};
+use crate::fs::{create_markdown_file, read_markdown_file, write_markdown_file};
 use crate::markdown::{render_markdown, Heading, RenderOptions, RenderedDocument};
 use crate::mdx::{is_mdx_path, simplify_mdx};
 use crate::FsError;
@@ -131,6 +131,49 @@ pub fn save_document(path: &Path, content: &str, options: &RenderOptions) -> Res
         headings: rendered.headings,
         word_count: rendered.word_count,
         // The content is a Rust string, so what landed on disk is valid UTF-8.
+        lossy: false,
+        flavor,
+        simplified,
+    })
+}
+
+/// Creates an empty Markdown document at `path` and returns it rendered.
+///
+/// Unlike [`save_document`], the target does not exist yet, so the path cannot
+/// be canonicalized as a whole. The *parent directory* is canonicalized
+/// instead and the chosen file name is joined onto the result, which keeps the
+/// same guarantees:
+///
+/// * the parent must already exist and be a directory — a missing folder is
+///   reported rather than created, and `..` or a symlinked folder is resolved
+///   before anything is touched, so the file lands exactly where the resolved
+///   directory is;
+/// * only the last component of `path` is used as the name, so no segment of a
+///   path from the UI can escape that directory;
+/// * the extension must be a Markdown one, and
+///   [`create_markdown_file`] creates the file with `create_new`, so an
+///   existing file or symlink is refused instead of being truncated.
+///
+/// This is why the frontend must get `path` from the operating system's own
+/// save dialog and never from a text field of its own: the user, not the
+/// document being viewed, picks the one directory this call may write to.
+pub fn create_document(path: &Path, options: &RenderOptions) -> Result<OpenedDocument, FsError> {
+    let name = path.file_name().ok_or(FsError::NotAFile)?;
+    let parent = canonicalize(path.parent().ok_or(FsError::NotFound)?)?;
+    if !parent.is_dir() {
+        return Err(FsError::NotADirectory);
+    }
+    let target = parent.join(name);
+    let metadata = create_markdown_file(&target)?;
+    let (rendered, flavor, simplified) = render_for_path(&target, "", options);
+    Ok(OpenedDocument {
+        path: metadata.path,
+        name: metadata.name,
+        size: metadata.size,
+        modified_ms: metadata.modified_ms,
+        html: rendered.html,
+        headings: rendered.headings,
+        word_count: rendered.word_count,
         lossy: false,
         flavor,
         simplified,
@@ -313,6 +356,105 @@ mod tests {
         assert_eq!(fs::read_to_string(&target).unwrap(), "new\n");
         // Replacing the target must not have replaced the link itself.
         assert!(fs::symlink_metadata(&link).unwrap().file_type().is_symlink());
+    }
+
+    #[test]
+    fn creates_an_empty_document_and_renders_it() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("untitled.md");
+
+        let doc = create_document(&path, &RenderOptions::default()).unwrap();
+        assert_eq!(doc.name, "untitled.md");
+        assert_eq!(doc.path, dunce::canonicalize(&path).unwrap().to_string_lossy());
+        assert_eq!(doc.size, 0);
+        assert_eq!(doc.html, "");
+        assert_eq!(doc.word_count, 0);
+        assert!(doc.headings.is_empty());
+        assert!(!doc.lossy);
+        assert_eq!(doc.flavor, DocumentFlavor::Markdown);
+        assert!(!doc.simplified);
+        assert_eq!(fs::read_to_string(&path).unwrap(), "");
+
+        // The new document can be opened and edited like any other.
+        let opened = open_document(&path, &RenderOptions::default()).unwrap();
+        assert_eq!(opened.path, doc.path);
+        save_document(&path, "# Started\n", &RenderOptions::default()).unwrap();
+        assert_eq!(fs::read_to_string(&path).unwrap(), "# Started\n");
+    }
+
+    #[test]
+    fn creates_mdx_documents_too() {
+        let dir = tempfile::tempdir().unwrap();
+        let doc = create_document(&dir.path().join("notes.mdx"), &RenderOptions::default()).unwrap();
+        assert_eq!(doc.flavor, DocumentFlavor::Mdx);
+        assert!(!doc.simplified);
+    }
+
+    #[test]
+    fn create_resolves_the_parent_directory() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::create_dir(dir.path().join("sub")).unwrap();
+        let doc = create_document(&dir.path().join("sub/../a.md"), &RenderOptions::default()).unwrap();
+        assert!(!doc.path.contains(".."));
+        assert!(dir.path().join("a.md").is_file());
+        assert!(!dir.path().join("sub/a.md").exists());
+    }
+
+    #[test]
+    fn create_refuses_existing_missing_and_unsupported_paths() {
+        let options = RenderOptions::default();
+        // Relative paths depend on the process directory and are refused.
+        assert_eq!(create_document(Path::new("new.md"), &options).unwrap_err(), FsError::NotFound);
+
+        let dir = tempfile::tempdir().unwrap();
+        let existing = dir.path().join("notes.md");
+        fs::write(&existing, "# Precious\n").unwrap();
+        assert_eq!(create_document(&existing, &options).unwrap_err(), FsError::AlreadyExists);
+        assert_eq!(fs::read_to_string(&existing).unwrap(), "# Precious\n");
+
+        let txt = dir.path().join("notes.txt");
+        assert_eq!(create_document(&txt, &options).unwrap_err(), FsError::UnsupportedType);
+        assert!(!txt.exists());
+
+        // A missing parent folder is reported, never created.
+        let nested = dir.path().join("gone/new.md");
+        assert_eq!(create_document(&nested, &options).unwrap_err(), FsError::NotFound);
+        assert!(!dir.path().join("gone").exists());
+
+        // A file where a folder is expected is not a folder.
+        let file_parent = existing.join("new.md");
+        assert_eq!(create_document(&file_parent, &options).unwrap_err(), FsError::NotADirectory);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn create_does_not_follow_a_link_to_a_non_markdown_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let secret = dir.path().join("profile.sh");
+        fs::write(&secret, "# shell profile\n").unwrap();
+        let link = dir.path().join("innocent.md");
+        std::os::unix::fs::symlink(&secret, &link).unwrap();
+
+        let err = create_document(&link, &RenderOptions::default()).unwrap_err();
+        assert_eq!(err, FsError::AlreadyExists);
+        assert_eq!(fs::read_to_string(&secret).unwrap(), "# shell profile\n");
+        assert!(fs::symlink_metadata(&link).unwrap().file_type().is_symlink());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn create_in_a_read_only_folder_is_refused() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let folder = dir.path().join("locked");
+        fs::create_dir(&folder).unwrap();
+        fs::set_permissions(&folder, fs::Permissions::from_mode(0o555)).unwrap();
+        let result = create_document(&folder.join("new.md"), &RenderOptions::default());
+        fs::set_permissions(&folder, fs::Permissions::from_mode(0o755)).unwrap();
+        // Root can write anywhere, so only assert when the mode actually applied.
+        if let Err(err) = result {
+            assert_eq!(err, FsError::PermissionDenied);
+        }
     }
 
     #[test]

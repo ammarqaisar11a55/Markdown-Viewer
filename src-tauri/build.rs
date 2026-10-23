@@ -5,6 +5,7 @@ const COMMANDS: &[&str] = &[
     "read_source",
     "render_source",
     "save_document",
+    "create_document",
     "scan_folder",
     "check_files",
     "watch_file",

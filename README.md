@@ -77,6 +77,9 @@ input.
 
 **Editing**
 
+- `Ctrl+N` creates a new Markdown file: the system's save dialog chooses where
+  it goes, and the file opens in a new tab ready to type in. The folder panel
+  and the folder context menu offer the same thing for a specific folder.
 - `Ctrl+E` opens the current file in a plain Markdown editor; `Esc` returns to
   reading with the preview updated from your draft.
 - `Ctrl+S` saves back to the file. Writes go to a temporary file first and are
@@ -84,6 +87,18 @@ input.
 - Unsaved changes are marked on the tab and in the editor status line, and you
   are asked before anything would discard them — closing a tab, reloading,
   quitting, or an external change to the same file.
+
+**Updates**
+
+- The app checks for new releases in the background (at most once a day) and
+  shows a quiet notice when one is available; nothing interrupts reading.
+- **Check for Updates** in Settings, the Help menu or the About dialog checks on
+  demand and always reports the result.
+- Updates download and install in place, with progress, and ask before
+  restarting — a restart is refused while a document has unsaved changes.
+- Every update is verified against the signing key built into the app, so only
+  releases signed by the maintainer can install. Automatic checks can be turned
+  off in Settings.
 
 **Desktop integration**
 
@@ -324,6 +339,7 @@ If the app is already running, the paths open in the existing window.
 | Open folder             | `Ctrl+Shift+O`                             |
 | Quick Open              | `Ctrl+P`                                   |
 | Reload document         | `Ctrl+R`, `F5`                             |
+| New file                | `Ctrl+N`                                   |
 | Edit document           | `Ctrl+E` (`Esc` to go back to reading)     |
 | Save document           | `Ctrl+S`                                   |
 | Close tab               | `Ctrl+W`                                   |
@@ -474,8 +490,9 @@ vulnerability.
   imports, exports and JSX tags are removed before rendering and `{expressions}`
   are shown literally. Rendering MDX faithfully would mean running JavaScript
   from the document, which this app does not do.
-- The editor is deliberately plain: no autosave, no "Save As", no creating new
-  files, and no syntax highlighting while editing.
+- The editor is deliberately plain: no autosave, no "Save As", and no syntax
+  highlighting while editing. New files are created through the system's save
+  dialog rather than inside the app.
 - Search does not find text that spans element boundaries (for example, a
   phrase that is partly bold).
 - Documents over 5 MB open without syntax highlighting.
@@ -486,6 +503,10 @@ vulnerability.
 - The Windows installer is built on Windows (in CI); it cannot be cross-built
   from Linux.
 - macOS is not packaged yet.
+- In-app updates work from 1.2.0 onwards: earlier builds have no updater, so
+  upgrading to 1.2.0 is a manual download.
+- The Debian package is not updated in place by the in-app updater (`apt` owns
+  those files); the AppImage and the Windows installer are.
 
 ## Contributing
 

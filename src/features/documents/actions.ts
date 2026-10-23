@@ -2,10 +2,11 @@
 // gets a request token and stale results (tab closed / reloaded again) are
 // ignored.
 import { toAppError } from '@/lib/errors';
-import { basename, isMarkdownPath, samePath } from '@/lib/paths';
-import { confirmDialog, pickMarkdownFiles } from '@/lib/platform/dialogs';
+import { basename, dirname, isMarkdownPath, samePath } from '@/lib/paths';
+import { confirmDialog, pickMarkdownFiles, pickNewMarkdownFile } from '@/lib/platform/dialogs';
 import {
   checkFiles,
+  createDocument as createDocumentFile,
   openDocumentFile,
   readSource,
   renderSource,
@@ -16,6 +17,7 @@ import {
 import { logger } from '@/lib/platform/logger';
 import { notify } from '@/lib/platform/system';
 import { MAX_CLOSED_PATHS, useDocuments } from '@/stores/documentsStore';
+import { useFolder } from '@/stores/folderStore';
 import { addRecent } from '@/stores/recentStore';
 import { useSettings } from '@/stores/settingsStore';
 import { dismissToast, toast } from '@/stores/toastStore';
@@ -26,7 +28,7 @@ import type {
   OpenedDocument,
   RenderedSource,
 } from '@/types';
-import { openFolder } from '../folder/actions';
+import { openFolder, refreshFolder } from '../folder/actions';
 
 export interface OpenDocumentOptions {
   newTab?: boolean;
@@ -326,6 +328,58 @@ export async function openPaths(paths: string[]): Promise<void> {
 export async function openFileDialog(): Promise<void> {
   const paths = await pickMarkdownFiles();
   if (paths.length > 0) await openMarkdownFiles(paths);
+}
+
+/**
+ * Creates a new Markdown file and opens it, ready to type in.
+ *
+ * The native save dialog picks the path — the app never creates a file at a
+ * path of its own making — and the backend refuses to overwrite anything that
+ * is already there. `directory` preselects the folder the action was invoked
+ * from; without one, the active document's folder or the open folder is used.
+ */
+export async function createFileDialog(directory: string | null = null): Promise<void> {
+  const path = await pickNewMarkdownFile(directory ?? suggestedDirectory());
+  // Cancelling the dialog does nothing at all.
+  if (path === null) return;
+
+  let doc: OpenedDocument;
+  try {
+    doc = await createDocumentFile(path, renderOptions());
+  } catch (err) {
+    const error = toAppError(err, 'create');
+    logger.error(`Failed to create ${path}`, error.technical);
+    toast({ variant: 'error', title: error.title, description: error.description });
+    return;
+  }
+
+  const existing = findTabByPath(doc.path);
+  if (existing !== undefined) {
+    // The new file landed where an open tab points, so that tab's own file was
+    // gone. Reloading asks first, so an unsaved draft is never thrown away.
+    activateTab(existing.id);
+    await Promise.all([reloadDocument(existing.id), folderRefresh()]);
+    return;
+  }
+
+  // A new document always gets its own tab; it never replaces what is open.
+  const tab = createTab(doc.path, 0);
+  useDocuments.setState(({ tabs }) => ({ tabs: [...tabs, tab], activeId: tab.id }));
+  applyLoaded(tab.id, doc, 0);
+  // The tree is rescanned so the new file shows up; the open tab selects it.
+  await Promise.all([startEditing(tab.id), folderRefresh()]);
+}
+
+/** Folder to offer when the caller did not name one. */
+function suggestedDirectory(): string | null {
+  const { tabs, activeId } = useDocuments.getState();
+  const active = activeId === null ? undefined : tabs.find((tab) => tab.id === activeId);
+  if (active !== undefined) return dirname(active.path);
+  return useFolder.getState().rootPath;
+}
+
+function folderRefresh(): Promise<void> {
+  return useFolder.getState().rootPath === null ? Promise.resolve() : refreshFolder();
 }
 
 function removeTabs(ids: string[], rememberClosed = true): void {

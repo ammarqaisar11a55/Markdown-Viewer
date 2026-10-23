@@ -103,7 +103,9 @@ fn error_response(err: &FsError) -> AssetResponse {
         FsError::NotFound | FsError::NotAFile | FsError::NotADirectory => AssetResponse::NotFound,
         FsError::PermissionDenied | FsError::UnsupportedType => AssetResponse::Forbidden,
         FsError::TooLarge { .. } => AssetResponse::TooLarge,
-        FsError::Io(_) => AssetResponse::Failed,
+        // Serving an asset only ever reads, so `AlreadyExists` cannot happen
+        // here; it is treated as any other unexpected failure.
+        FsError::AlreadyExists | FsError::Io(_) => AssetResponse::Failed,
     }
 }
 

@@ -11,6 +11,8 @@ use serde::{Serialize, Serializer};
 pub enum FsError {
     #[error("the file or folder does not exist")]
     NotFound,
+    #[error("a file with this name already exists")]
+    AlreadyExists,
     #[error("permission denied")]
     PermissionDenied,
     #[error("the path is not a file")]
@@ -29,6 +31,7 @@ impl FsError {
     pub fn kind(&self) -> &'static str {
         match self {
             Self::NotFound => "notFound",
+            Self::AlreadyExists => "alreadyExists",
             Self::PermissionDenied => "permissionDenied",
             Self::NotAFile => "notAFile",
             Self::NotADirectory => "notADirectory",
@@ -43,6 +46,7 @@ impl From<io::Error> for FsError {
     fn from(err: io::Error) -> Self {
         match err.kind() {
             io::ErrorKind::NotFound => Self::NotFound,
+            io::ErrorKind::AlreadyExists => Self::AlreadyExists,
             io::ErrorKind::PermissionDenied => Self::PermissionDenied,
             io::ErrorKind::IsADirectory => Self::NotAFile,
             io::ErrorKind::NotADirectory => Self::NotADirectory,
@@ -71,6 +75,7 @@ mod tests {
             FsError::from(io::Error::from(io::ErrorKind::PermissionDenied)),
             FsError::PermissionDenied
         );
+        assert_eq!(FsError::from(io::Error::from(io::ErrorKind::AlreadyExists)), FsError::AlreadyExists);
         assert_eq!(FsError::from(io::Error::other("boom")).kind(), "io");
     }
 

@@ -14,6 +14,7 @@ import { SegmentedControl, type SegmentedOption } from '@/components/ui/Segmente
 import { Slider } from '@/components/ui/Slider';
 import { BooleanSetting } from './BooleanSetting';
 import { SettingRow, SettingSection } from './SettingRow';
+import { UpdatesSection } from './UpdatesSection';
 
 const THEMES: readonly SegmentedOption<ThemePreference>[] = [
   { value: 'system', label: 'System', icon: <Monitor aria-hidden /> },
@@ -187,6 +188,8 @@ function SettingsContent() {
           description="Non-Markdown files are listed but cannot be opened."
         />
       </SettingSection>
+
+      <UpdatesSection />
 
       <SettingSection title="Markdown">
         <BooleanSetting setting="syntaxHighlighting" label="Syntax highlighting" />

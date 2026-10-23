@@ -75,6 +75,7 @@ export interface DirectoryTree {
 
 export type FsErrorKind =
   | 'notFound'
+  | 'alreadyExists'
   | 'permissionDenied'
   | 'notAFile'
   | 'notADirectory'
@@ -136,6 +137,8 @@ export interface Settings {
   autoReload: boolean;
   rememberRecent: boolean;
   showAllFiles: boolean;
+  // Updates
+  autoCheckUpdates: boolean;
   // Markdown
   syntaxHighlighting: boolean;
   lineNumbers: boolean;

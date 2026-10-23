@@ -16,7 +16,8 @@ mod sanitize;
 pub mod watch;
 
 pub use document::{
-    open_document, render_source, save_document, DocumentFlavor, OpenedDocument, RenderedSource,
+    create_document, open_document, render_source, save_document, DocumentFlavor, OpenedDocument,
+    RenderedSource,
 };
 pub use error::FsError;
 pub use markdown::{render_markdown, Heading, RenderOptions, RenderedDocument};

@@ -144,20 +144,25 @@ network requests except to load images.
 
 ### Writing files
 
-Saving is the only operation that writes, and it is deliberately narrow:
+Two operations write, and both are deliberately narrow:
 
 - `save_document` canonicalizes the path **before** validating it, so the checks
   apply to the real target and a symlink named `notes.md` cannot redirect a
   write to the file it points at.
-- It refuses anything that is not an already-existing Markdown file. The app
-  cannot create files, so there is no "Save As" and no way for a document, or a
-  stale path held by the UI, to write to a new location.
+- It refuses anything that is not an already-existing Markdown file, so there is
+  no way for a document, or a stale path held by the UI, to redirect a save.
 - Content is written to a temporary file in the same directory, flushed to disk
   and then renamed over the original, so an interrupted or failed save leaves
   the previous content intact. On Unix the file's permissions are preserved.
 - Content over 64 MB is refused, as on the read path.
 - A save refreshes the file watcher's signature, so the app's own write is not
   reported back as an external change.
+- `create_document` creates an empty Markdown file and nothing else. The path
+  always comes from the operating system's own save dialog — never from a path
+  typed into the app — and Rust canonicalizes the parent directory before
+  joining the chosen name. It uses create-new semantics, so an existing file is
+  refused rather than truncated, a symlink (even a dangling one) is refused
+  rather than followed, and missing directories are never created.
 
 ### MDX
 
@@ -167,6 +172,22 @@ Markdown parser, and `{expressions}` are rendered as literal text rather than
 evaluated. Nothing in an MDX document reaches a JavaScript runtime, because the
 app does not have one for document content. The removal never touches code
 blocks, so a document that _documents_ MDX still shows its examples.
+
+### Updates
+
+The in-app updater only installs releases signed with the project's private
+key. The matching public key is compiled into the application, the private key
+lives only in the maintainer's hands and in a GitHub Actions secret, and the
+release workflow signs each artifact during the build. An update whose
+signature does not verify is rejected before anything is installed, so a
+compromised download host, a hijacked DNS answer or a tampered release asset
+cannot push code into the app.
+
+Update metadata is fetched over HTTPS from the project's GitHub releases.
+Checking happens in the Rust layer, not in the document webview, so no document
+can observe or influence it. Installing is always an explicit user action, and
+the restart that completes it is refused while any document has unsaved
+changes.
 
 ### Local images
 

@@ -142,6 +142,32 @@ pub fn write_markdown_file(path: &Path, content: &str) -> Result<FileMetadata, F
     Ok(metadata_for(path, &fs::metadata(path)?))
 }
 
+/// Creates a new, empty Markdown file at `path` and returns its metadata.
+///
+/// The sibling of [`write_markdown_file`], and just as narrow: this widens the
+/// application's write surface from "replace the open document" to "add one
+/// file", and not one byte further.
+///
+/// * the extension must be a Markdown one, so nothing else can be created;
+/// * the file is opened with `create_new`, so an existing file — or an existing
+///   symlink, even a dangling one — makes the call fail with
+///   [`FsError::AlreadyExists`] instead of being truncated or followed. No
+///   content can therefore be lost, and a link named `innocent.md` can never
+///   be used to plant a file at the path it points at;
+/// * nothing is created recursively: the parent directory must already exist
+///   (callers canonicalize it first, see [`crate::document::create_document`]),
+///   so a path from the UI cannot make the app build a directory tree.
+///
+/// The file is created empty: there is no content parameter, because the only
+/// way to put bytes into a document stays [`write_markdown_file`].
+pub fn create_markdown_file(path: &Path) -> Result<FileMetadata, FsError> {
+    if !is_markdown_path(path) {
+        return Err(FsError::UnsupportedType);
+    }
+    drop(fs::OpenOptions::new().write(true).create_new(true).open(path)?);
+    Ok(metadata_for(path, &fs::metadata(path)?))
+}
+
 /// Whether the temp-file-and-rename strategy could be used.
 enum Replacement {
     Replaced,
@@ -575,6 +601,83 @@ mod tests {
         if let Err(err) = result {
             assert_eq!(err, FsError::PermissionDenied);
             assert_eq!(fs::read_to_string(&path).unwrap(), "original");
+        }
+    }
+
+    // --- Creating -------------------------------------------------------------
+
+    #[test]
+    fn creates_an_empty_markdown_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("untitled.md");
+
+        let meta = create_markdown_file(&path).unwrap();
+        assert_eq!(meta.name, "untitled.md");
+        assert_eq!(meta.size, 0);
+        assert!(meta.modified_ms.is_some());
+        assert_eq!(fs::read_to_string(&path).unwrap(), "");
+        assert_eq!(read_markdown_file(&path).unwrap().content, "");
+    }
+
+    #[test]
+    fn create_never_truncates_an_existing_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("notes.md");
+        write(&path, "# Precious\n");
+        assert_eq!(create_markdown_file(&path).unwrap_err(), FsError::AlreadyExists);
+        assert_eq!(fs::read_to_string(&path).unwrap(), "# Precious\n");
+
+        // A directory of the same name is reported the same way, not as a file.
+        let folder = dir.path().join("folder.md");
+        fs::create_dir(&folder).unwrap();
+        assert_eq!(create_markdown_file(&folder).unwrap_err(), FsError::AlreadyExists);
+    }
+
+    #[test]
+    fn create_refuses_non_markdown_and_missing_parents() {
+        let dir = tempfile::tempdir().unwrap();
+
+        let txt = dir.path().join("notes.txt");
+        assert_eq!(create_markdown_file(&txt).unwrap_err(), FsError::UnsupportedType);
+        assert!(!txt.exists());
+
+        let nested = dir.path().join("gone/new.md");
+        assert_eq!(create_markdown_file(&nested).unwrap_err(), FsError::NotFound);
+        assert!(!dir.path().join("gone").exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn create_does_not_follow_a_symlink() {
+        let dir = tempfile::tempdir().unwrap();
+        let secret = dir.path().join("profile.sh");
+        write(&secret, "# shell profile\n");
+        let link = dir.path().join("innocent.md");
+        std::os::unix::fs::symlink(&secret, &link).unwrap();
+        assert_eq!(create_markdown_file(&link).unwrap_err(), FsError::AlreadyExists);
+        assert_eq!(fs::read_to_string(&secret).unwrap(), "# shell profile\n");
+
+        // Not even a link whose target does not exist yet is followed.
+        let dangling = dir.path().join("dangling.md");
+        std::os::unix::fs::symlink(dir.path().join("nowhere.md"), &dangling).unwrap();
+        assert_eq!(create_markdown_file(&dangling).unwrap_err(), FsError::AlreadyExists);
+        assert!(!dir.path().join("nowhere.md").exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn create_in_a_read_only_folder_is_refused() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let folder = dir.path().join("locked");
+        fs::create_dir(&folder).unwrap();
+        fs::set_permissions(&folder, fs::Permissions::from_mode(0o555)).unwrap();
+        let result = create_markdown_file(&folder.join("new.md"));
+        fs::set_permissions(&folder, fs::Permissions::from_mode(0o755)).unwrap();
+        // Root can write anywhere, so only assert when the mode actually applied.
+        if let Err(err) = result {
+            assert_eq!(err, FsError::PermissionDenied);
+            assert!(fs::read_dir(&folder).unwrap().next().is_none());
         }
     }
 

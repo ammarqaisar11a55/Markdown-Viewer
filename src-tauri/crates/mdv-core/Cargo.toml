@@ -1,6 +1,6 @@
 [package]
 name = "mdv-core"
-version = "1.3.0"
+version = "1.3.1"
 description = "Platform-independent core of Markdown Viewer: rendering, sanitization and filesystem access."
 edition = "2021"
 rust-version = "1.80"

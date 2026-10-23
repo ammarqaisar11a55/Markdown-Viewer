@@ -10,6 +10,7 @@
     "core:window:allow-set-focus",
     "core:window:allow-unminimize",
     "core:window:allow-close",
+    "core:window:allow-destroy",
     "core:window:allow-is-fullscreen",
     "core:app:allow-version",
     "dialog:allow-open",
@@ -17,7 +18,17 @@
     "dialog:allow-message",
     {
       "identifier": "opener:allow-open-url",
-      "allow": [{ "url": "http://*" }, { "url": "https://*" }, { "url": "mailto:*" }]
+      "allow": [
+        {
+          "url": "http://*"
+        },
+        {
+          "url": "https://*"
+        },
+        {
+          "url": "mailto:*"
+        }
+      ]
     },
     "opener:allow-reveal-item-in-dir",
     "store:default",

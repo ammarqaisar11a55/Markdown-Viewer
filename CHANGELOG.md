@@ -8,6 +8,16 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-10-23
+
+### Fixed
+
+- The app could not be quit. Closing the window — with the close button,
+  `Ctrl+Q` or the menu — ran the unsaved-changes check and then stopped,
+  because the window never received permission to destroy itself. Quitting
+  works again, and the check now fails open: if it ever errors, the window
+  closes and the reason is logged rather than trapping you in the app.
+
 ## [1.3.0] - 2026-10-23
 
 ### Added
@@ -150,7 +160,8 @@ Initial release.
 - Remote image loading can be disabled; insecure `http:` images are always
   blocked.
 
-[Unreleased]: https://github.com/ammarqaisar11a55/Markdown-Viewer/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/ammarqaisar11a55/Markdown-Viewer/compare/v1.3.1...HEAD
+[1.3.1]: https://github.com/ammarqaisar11a55/Markdown-Viewer/releases/tag/v1.3.1
 [1.3.0]: https://github.com/ammarqaisar11a55/Markdown-Viewer/releases/tag/v1.3.0
 [1.2.0]: https://github.com/ammarqaisar11a55/Markdown-Viewer/releases/tag/v1.2.0
 [1.1.0]: https://github.com/ammarqaisar11a55/Markdown-Viewer/releases/tag/v1.1.0

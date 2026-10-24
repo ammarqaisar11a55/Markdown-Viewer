@@ -1,4 +1,4 @@
-import { parseInline, parseReleaseNotes } from './releaseNotes';
+import { parseInline, parseReleaseNotes } from './releaseNotesParser';
 
 describe('parseInline', () => {
   it('keeps plain text as one span', () => {

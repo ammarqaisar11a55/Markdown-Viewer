@@ -1,5 +1,5 @@
 import { useMemo, type ReactNode } from 'react';
-import { parseReleaseNotes, type NoteSpan } from './releaseNotes';
+import { parseReleaseNotes, type NoteSpan } from './releaseNotesParser';
 
 export interface ReleaseNotesProps {
   /** The version the notes describe, when the server announced one. */

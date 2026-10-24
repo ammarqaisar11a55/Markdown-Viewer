@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-10-25
+
 ### Added
 
 - A snap package, published as `markdown-viewer-desktop`. The Snap Store
@@ -198,7 +200,8 @@ Initial release.
 - Remote image loading can be disabled; insecure `http:` images are always
   blocked.
 
-[Unreleased]: https://github.com/ammarqaisar11a55/Markdown-Viewer/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/ammarqaisar11a55/Markdown-Viewer/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/ammarqaisar11a55/Markdown-Viewer/releases/tag/v1.5.0
 [1.4.0]: https://github.com/ammarqaisar11a55/Markdown-Viewer/releases/tag/v1.4.0
 [1.3.1]: https://github.com/ammarqaisar11a55/Markdown-Viewer/releases/tag/v1.3.1
 [1.3.0]: https://github.com/ammarqaisar11a55/Markdown-Viewer/releases/tag/v1.3.0

@@ -225,8 +225,11 @@ describe('StatusBar', () => {
     setTabs(makeTab());
     useUi.setState({ zoom: 1.2 });
     render(<StatusBar />);
-    expect(screen.getByText('1,150 words')).toBeInTheDocument();
-    expect(screen.getByText('5 min read')).toBeInTheDocument();
+    // Labelled cells: the caption carries the noun, the cell the value.
+    expect(screen.getByText('Words')).toBeInTheDocument();
+    expect(screen.getByText('1,150')).toBeInTheDocument();
+    expect(screen.getByText('Read')).toBeInTheDocument();
+    expect(screen.getByText('5 min')).toBeInTheDocument();
     const zoom = screen.getByRole('button', { name: 'Zoom 120%, reset zoom' });
     await user.click(zoom);
     expect(useUi.getState().zoom).toBe(1);
@@ -245,13 +248,15 @@ describe('StatusBar', () => {
     setTabs(makeTab({ editing: true, draft: 'x', savedText: 'y', dirty: true }));
     render(<StatusBar />);
     expect(screen.getByText('Editing — unsaved changes')).toBeInTheDocument();
-    expect(screen.queryByText('1,150 words')).not.toBeInTheDocument();
+    expect(screen.queryByText('1,150')).not.toBeInTheDocument();
   });
 
   it('omits document details without an active document', () => {
     render(<StatusBar />);
-    expect(screen.queryByText(/words/)).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Switch to dark theme' })).toBeInTheDocument();
+    expect(screen.queryByText('Words')).not.toBeInTheDocument();
+    expect(screen.queryByText('Read')).not.toBeInTheDocument();
+    // Zoom is a property of the window, so it stays.
+    expect(screen.getByRole('button', { name: /reset zoom/ })).toBeInTheDocument();
   });
 });
 

@@ -10,6 +10,7 @@ export interface SwitchProps {
   disabled?: boolean;
 }
 
+/** A square-cornered track with a square knob; on, it fills with the accent. */
 export function Switch({ checked, onChange, id, labelledBy, describedBy, disabled }: SwitchProps) {
   return (
     <button
@@ -24,16 +25,16 @@ export function Switch({ checked, onChange, id, labelledBy, describedBy, disable
         onChange(!checked);
       }}
       className={clsx(
-        'relative inline-flex h-[18px] w-8 shrink-0 items-center rounded-full border transition-colors duration-150',
-        'focus-visible:rounded-full disabled:opacity-50',
-        checked ? 'border-accent bg-accent' : 'border-border-strong bg-bg-muted',
+        'relative inline-block h-5 w-[38px] shrink-0 border transition-colors duration-150',
+        'disabled:opacity-45',
+        checked ? 'border-accent bg-accent' : 'border-border-strong bg-transparent',
       )}
     >
       <span
         aria-hidden
         className={clsx(
-          'block size-3 rounded-full shadow-sm transition-transform duration-150',
-          checked ? 'translate-x-[15px] bg-accent-fg' : 'translate-x-[2px] bg-bg-elevated',
+          'absolute top-[3px] left-[3px] block size-3 transition-transform duration-150',
+          checked ? 'translate-x-[18px] bg-accent-fg' : 'bg-fg-muted',
         )}
       />
     </button>

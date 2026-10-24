@@ -14,8 +14,8 @@ export interface IconButtonProps extends Omit<ComponentPropsWithRef<'button'>, '
 }
 
 const SIZES = {
-  sm: 'size-6 rounded-sm [&_svg]:size-3.5',
-  md: 'size-7 rounded-md [&_svg]:size-4',
+  sm: 'size-6 [&_svg]:size-3.5',
+  md: 'size-7 [&_svg]:size-4',
 } as const;
 
 export function IconButton({
@@ -39,7 +39,7 @@ export function IconButton({
           'disabled:pointer-events-none disabled:opacity-40',
           active
             ? 'bg-accent-subtle text-accent'
-            : 'text-fg-muted hover:bg-bg-muted hover:text-fg active:bg-bg-muted',
+            : 'text-fg-muted hover:bg-bg-muted hover:text-fg active:bg-bg-inset',
           SIZES[size],
           className,
         )}

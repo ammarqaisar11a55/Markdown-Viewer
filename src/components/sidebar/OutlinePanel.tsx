@@ -6,6 +6,7 @@ import { scrollToHeading, useViewer } from '@/stores/viewerStore';
 import type { Heading } from '@/types';
 import { EmptyMessage } from '@/components/ui/EmptyMessage';
 import { findByData } from '@/components/ui/dom';
+import { SidebarPanelHeader } from './SidebarPanelHeader';
 
 const INDENT_PX = 12;
 
@@ -27,25 +28,6 @@ export function OutlinePanel() {
     item?.scrollIntoView({ block: 'nearest' });
   }, [activeId]);
 
-  if (!hasDocument) {
-    return (
-      <EmptyMessage
-        icon={<ListTree />}
-        title="No outline"
-        description="Open a document to see its headings."
-      />
-    );
-  }
-  if (headings.length === 0) {
-    return (
-      <EmptyMessage
-        icon={<ListTree />}
-        title="No headings"
-        description="This document has no headings."
-      />
-    );
-  }
-
   const onKeyDown = (event: KeyboardEvent<HTMLUListElement>) => {
     const buttons = Array.from(
       listRef.current?.querySelectorAll<HTMLButtonElement>('button[data-heading-id]') ?? [],
@@ -61,21 +43,50 @@ export function OutlinePanel() {
     buttons[next]?.focus();
   };
 
+  const count = headings.length;
+
   return (
-    <nav aria-label="Document outline" className="px-2 pb-3">
-      {/* Arrow-key navigation between entries; each entry is a native button. */}
-      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
-      <ul ref={listRef} onKeyDown={onKeyDown} className="flex flex-col">
-        {headings.map((heading) => (
-          <OutlineItem
-            key={heading.id}
-            heading={heading}
-            depth={heading.level - minLevel}
-            active={heading.id === activeId}
-          />
-        ))}
-      </ul>
-    </nav>
+    <div className="flex min-h-0 flex-1 flex-col">
+      <SidebarPanelHeader title="Outline">
+        {count > 0 && (
+          <span className="shrink-0 pr-1 text-ui-xs text-fg-muted">
+            {count === 1 ? '1 heading' : `${count} headings`}
+          </span>
+        )}
+      </SidebarPanelHeader>
+
+      {!hasDocument ? (
+        <EmptyMessage
+          icon={<ListTree />}
+          title="No outline"
+          description="Open a document to see its headings."
+        />
+      ) : count === 0 ? (
+        <EmptyMessage
+          icon={<ListTree />}
+          title="No headings"
+          description="This document has no headings."
+        />
+      ) : (
+        <nav
+          aria-label="Document outline"
+          className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-2 pt-2 pb-6"
+        >
+          {/* Arrow-key navigation between entries; each entry is a native button. */}
+          {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
+          <ul ref={listRef} onKeyDown={onKeyDown} className="flex flex-col">
+            {headings.map((heading) => (
+              <OutlineItem
+                key={heading.id}
+                heading={heading}
+                depth={heading.level - minLevel}
+                active={heading.id === activeId}
+              />
+            ))}
+          </ul>
+        </nav>
+      )}
+    </div>
   );
 }
 
@@ -98,11 +109,11 @@ const OutlineItem = memo(function OutlineItem({
         onClick={() => {
           scrollToHeading(heading.id);
         }}
-        style={{ paddingLeft: 8 + depth * INDENT_PX }}
+        style={{ paddingLeft: 10 + depth * INDENT_PX }}
         className={clsx(
-          'focus-inset relative flex h-7 w-full min-w-0 items-center rounded-md pr-2 text-left',
+          'focus-inset relative flex min-h-7 w-full min-w-0 items-center py-[5px] pr-2 text-left',
           'transition-colors duration-100',
-          active ? 'bg-accent-subtle text-accent' : 'hover:bg-bg-muted',
+          active ? 'mv-bar-left bg-accent-subtle text-accent' : 'hover:bg-bg-muted',
           !active && (depth === 0 ? 'text-fg' : 'text-fg-muted hover:text-fg'),
           depth === 0 && 'font-medium',
         )}

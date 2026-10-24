@@ -54,7 +54,8 @@ export function SegmentedControl<T extends string>({
       aria-label={label}
       aria-labelledby={labelledBy}
       className={clsx(
-        'inline-flex h-7 items-center gap-0.5 rounded-md border border-border bg-bg-inset p-0.5',
+        // A drawn row of cells: one hairline frame, hairline rules between.
+        'inline-flex h-7 items-stretch overflow-hidden border border-border',
         className,
       )}
     >
@@ -72,11 +73,11 @@ export function SegmentedControl<T extends string>({
               onChange(option.value);
             }}
             className={clsx(
-              'inline-flex h-full items-center gap-1.5 rounded-sm px-2.5 text-ui-sm font-medium',
+              'inline-flex h-full items-center gap-1.5 px-3 text-ui [&:not(:first-child)]:border-l [&:not(:first-child)]:border-border',
               'transition-colors duration-100 [&_svg]:size-3.5',
               selected
-                ? 'bg-bg-elevated text-fg shadow-[0_0_0_1px_var(--border),0_1px_2px_rgb(0_0_0/0.06)]'
-                : 'text-fg-muted hover:text-fg',
+                ? 'bg-accent-solid text-accent-solid-fg'
+                : 'text-fg-muted hover:bg-bg-muted hover:text-fg',
             )}
           >
             {option.icon}

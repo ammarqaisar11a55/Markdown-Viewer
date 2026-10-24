@@ -1,20 +1,30 @@
 import { clsx } from 'clsx';
-import { Moon, Sun } from 'lucide-react';
 import { memo } from 'react';
-import { getShortcutLabel, runCommand } from '@/app/commands';
-import { useResolvedTheme } from '@/hooks/useThemeEffect';
+import { getShortcutLabel } from '@/app/commands';
 import { displayPath } from '@/lib/paths';
 import { logger } from '@/lib/platform/logger';
 import { copyText } from '@/lib/platform/system';
 import { selectActiveTab, useDocuments } from '@/stores/documentsStore';
 import { toast } from '@/stores/toastStore';
 import { useUi } from '@/stores/uiStore';
-import { IconButton } from '@/components/ui/IconButton';
 import { Tooltip } from '@/components/ui/Tooltip';
-import { formatEditingState, formatReadingTime, formatWordCount, formatZoom } from './format';
+import { formatEditingState, formatReadingValue, formatWordValue, formatZoom } from './format';
 
+/* The status bar reads as a spec sheet: cells divided by hairlines. */
 const itemClass =
-  'flex h-full items-center rounded-sm px-1.5 transition-colors duration-100 hover:bg-bg-muted hover:text-fg';
+  'flex h-full items-center px-2.5 transition-colors duration-100 hover:bg-bg-muted hover:text-fg';
+
+const cellClass = 'flex items-center gap-2 border-l border-border px-2.5';
+
+/** A labelled status cell: condensed caption, then the value. */
+function Cell({ label, value }: { label: string; value: string }) {
+  return (
+    <span className={cellClass}>
+      <span className="mv-label text-fg-subtle">{label}</span>
+      <span>{value}</span>
+    </span>
+  );
+}
 
 async function copyPath(path: string): Promise<void> {
   try {
@@ -34,14 +44,13 @@ export const StatusBar = memo(function StatusBar() {
   const saving = useDocuments((s) => selectActiveTab(s)?.saving ?? false);
   const zoom = useUi((s) => s.zoom);
   const resetZoom = useUi((s) => s.resetZoom);
-  const theme = useResolvedTheme();
 
   return (
     <footer
       aria-label="Status bar"
-      className="theme-surface flex h-6 shrink-0 items-center gap-2 border-t border-border bg-bg-subtle px-1.5 text-ui-xs text-fg-muted"
+      className="theme-surface flex h-[30px] shrink-0 items-stretch border-t border-border text-ui-xs text-fg"
     >
-      <div className="flex h-full min-w-0 flex-1 items-center py-0.5">
+      <div className="flex h-full min-w-0 flex-1 items-center">
         {path && (
           <Tooltip label="Copy file path" side="top" className="min-w-0">
             <button
@@ -54,14 +63,14 @@ export const StatusBar = memo(function StatusBar() {
           </Tooltip>
         )}
       </div>
-      <div className="tabular flex h-full shrink-0 items-center gap-1 py-0.5">
+      <div className="tabular flex h-full shrink-0 items-stretch">
         {editing ? (
-          <span className="px-1.5">{formatEditingState(saving, dirty)}</span>
+          <Cell label="State" value={formatEditingState(saving, dirty)} />
         ) : (
           wordCount !== null && (
             <>
-              <span className="px-1.5">{formatWordCount(wordCount)}</span>
-              <span className="px-1.5">{formatReadingTime(wordCount)}</span>
+              <Cell label="Words" value={formatWordValue(wordCount)} />
+              <Cell label="Read" value={formatReadingValue(wordCount)} />
             </>
           )
         )}
@@ -70,20 +79,12 @@ export const StatusBar = memo(function StatusBar() {
             type="button"
             onClick={resetZoom}
             aria-label={`Zoom ${formatZoom(zoom)}, reset zoom`}
-            className={clsx(itemClass, 'w-11 justify-center')}
+            className={clsx(itemClass, 'gap-2 border-l border-border')}
           >
+            <span className="mv-label text-fg-subtle">Zoom</span>
             {formatZoom(zoom)}
           </button>
         </Tooltip>
-        <IconButton
-          size="sm"
-          tooltipSide="top"
-          label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
-          shortcut={getShortcutLabel('view.toggleTheme')}
-          icon={theme === 'dark' ? <Sun /> : <Moon />}
-          onClick={() => void runCommand('view.toggleTheme')}
-          className="size-5!"
-        />
       </div>
     </footer>
   );

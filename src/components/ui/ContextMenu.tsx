@@ -136,7 +136,7 @@ function ContextMenuPanel() {
       }
       className={clsx(
         'animate-pop-in fixed z-[90] max-h-[calc(100vh-8px)] max-w-80 min-w-48 overflow-y-auto',
-        'rounded-md border border-border bg-bg-elevated p-1 text-ui text-fg',
+        'border border-border bg-bg-elevated py-1 text-ui text-fg',
         'shadow-(--shadow-popover) focus-visible:outline-none',
       )}
     >
@@ -147,7 +147,7 @@ function ContextMenuPanel() {
               // Separators have no identity of their own.
               key={`separator-${index}`}
               role="separator"
-              className="mx-1 my-1 h-px bg-border"
+              className="my-1 h-px bg-border"
             />
           );
         }
@@ -175,18 +175,21 @@ function ContextMenuPanel() {
               }
             }}
             className={clsx(
-              'flex h-7 items-center gap-6 rounded-sm px-2',
+              'flex h-7 items-center gap-6 px-2.5',
               item.disabled && 'cursor-default text-fg-subtle',
               !item.disabled && item.danger && 'text-danger',
-              active && (item.danger ? 'bg-danger-subtle' : 'bg-accent text-accent-fg'),
+              active &&
+                (item.danger
+                  ? 'mv-bar-left bg-danger-subtle [--mv-bar:var(--danger)]'
+                  : 'mv-bar-left bg-accent-subtle text-fg'),
             )}
           >
             <span className="min-w-0 flex-1 truncate">{item.label}</span>
             {item.shortcut && (
               <span
                 className={clsx(
-                  'tabular shrink-0 text-ui-sm',
-                  active && !item.danger ? 'text-accent-fg/80' : 'text-fg-subtle',
+                  'mv-num shrink-0 text-ui-xs',
+                  active && !item.danger ? 'text-fg-muted' : 'text-fg-subtle',
                 )}
               >
                 {item.shortcut}

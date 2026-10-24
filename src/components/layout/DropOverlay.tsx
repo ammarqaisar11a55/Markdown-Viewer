@@ -7,12 +7,12 @@ export function DropOverlay() {
   return (
     <div
       aria-hidden
-      className="animate-fade-in pointer-events-none fixed inset-0 z-[70] flex bg-bg/80 p-3 backdrop-blur-[2px]"
+      className="animate-fade-in pointer-events-none fixed inset-0 z-[70] flex bg-bg/85 p-4 backdrop-blur-[2px]"
     >
-      <div className="flex flex-1 flex-col items-center justify-center rounded-lg border-2 border-dashed border-accent/60 bg-accent-subtle/40">
+      <div className="mv-marks flex flex-1 flex-col items-center justify-center border border-dashed border-accent bg-accent-subtle/40">
         <FileDown className="size-8 text-accent" />
-        <p className="mt-3 text-ui-lg font-semibold text-fg">Drop to open</p>
-        <p className="mt-0.5 text-ui text-fg-muted">Markdown files and folders</p>
+        <p className="mt-4 font-heading text-[28px] leading-none uppercase">Drop to open</p>
+        <p className="mt-2 text-ui text-fg-muted">Markdown files and folders</p>
       </div>
     </div>
   );

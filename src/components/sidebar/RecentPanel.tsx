@@ -1,5 +1,5 @@
 import { clsx } from 'clsx';
-import { Clock, FileText, X } from 'lucide-react';
+import { Clock, X } from 'lucide-react';
 import { memo, type KeyboardEvent, type MouseEvent } from 'react';
 import { openDocument } from '@/features/documents/actions';
 import { clearRecent, removeRecent, useRecent } from '@/features/recent/actions';
@@ -10,23 +10,12 @@ import { useSettings } from '@/stores/settingsStore';
 import type { RecentFile } from '@/types';
 import { EmptyMessage } from '@/components/ui/EmptyMessage';
 import { openFileMenuItems, pathMenuItems } from './entryMenu';
+import { SidebarPanelHeader } from './SidebarPanelHeader';
 
 export function RecentPanel() {
   const items = useRecent((s) => s.items);
   const remember = useSettings((s) => s.rememberRecent);
   const activePath = useDocuments((s) => selectActiveTab(s)?.path ?? null);
-
-  if (items.length === 0) {
-    return (
-      <EmptyMessage
-        icon={<Clock />}
-        title="No recent files"
-        description={
-          remember ? 'Files you open will appear here.' : 'Recent files are turned off in Settings.'
-        }
-      />
-    );
-  }
 
   const onKeyDown = (event: KeyboardEvent<HTMLUListElement>) => {
     if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
@@ -43,39 +32,57 @@ export function RecentPanel() {
   };
 
   return (
-    <section aria-labelledby="recent-heading" className="flex min-h-0 flex-col">
-      <div className="flex h-8 shrink-0 items-center pr-2 pl-3">
-        <h2 id="recent-heading" className="flex-1 text-ui-sm font-semibold text-fg-muted">
-          Recent files
-        </h2>
-        <button
-          type="button"
-          onClick={clearRecent}
-          className="h-6 rounded-sm px-1.5 text-ui-sm text-fg-muted transition-colors duration-100 hover:bg-bg-muted hover:text-fg"
+    <div className="flex min-h-0 flex-1 flex-col">
+      <SidebarPanelHeader title="Recent">
+        {items.length > 0 && (
+          <button
+            type="button"
+            onClick={clearRecent}
+            className="h-6.5 shrink-0 px-2 font-heading text-ui font-semibold text-accent transition-colors duration-100 hover:bg-accent-subtle"
+          >
+            Clear
+          </button>
+        )}
+      </SidebarPanelHeader>
+
+      {items.length === 0 ? (
+        <EmptyMessage
+          icon={<Clock />}
+          title="No recent files"
+          description={
+            remember
+              ? 'Files you open will appear here.'
+              : 'Recent files are turned off in Settings.'
+          }
+        />
+      ) : (
+        /* Arrow keys move between the native buttons in the list. */
+        /* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */
+        <ul
+          onKeyDown={onKeyDown}
+          className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-2 pt-2 pb-4"
         >
-          Clear
-        </button>
-      </div>
-      {/* Arrow keys move between the native buttons in the list. */}
-      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
-      <ul className="px-2 pb-3" onKeyDown={onKeyDown}>
-        {items.map((item) => (
-          <RecentItem
-            key={item.path}
-            item={item}
-            active={activePath !== null && samePath(activePath, item.path)}
-          />
-        ))}
-      </ul>
-    </section>
+          {items.map((item, index) => (
+            <RecentItem
+              key={item.path}
+              item={item}
+              index={index}
+              active={activePath !== null && samePath(activePath, item.path)}
+            />
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
 const RecentItem = memo(function RecentItem({
   item,
+  index,
   active,
 }: {
   item: RecentFile;
+  index: number;
   active: boolean;
 }) {
   const onContextMenu = (event: MouseEvent) => {
@@ -106,15 +113,21 @@ const RecentItem = memo(function RecentItem({
         onClick={() => void openDocument(item.path)}
         onContextMenu={onContextMenu}
         className={clsx(
-          'focus-inset flex w-full min-w-0 items-start gap-2 rounded-md py-1.5 pr-8 pl-2 text-left',
+          'focus-inset flex w-full min-w-0 items-start gap-1 py-[7px] pr-7 pl-2 text-left',
           'transition-colors duration-75',
-          active ? 'bg-accent-subtle' : 'hover:bg-bg-muted',
+          active ? 'mv-bar-left bg-accent-subtle' : 'hover:bg-bg-muted',
         )}
       >
-        <FileText
+        {/* The design numbers the list instead of repeating a file icon. */}
+        <span
           aria-hidden
-          className={clsx('mt-0.5 size-4 shrink-0', active ? 'text-accent' : 'text-fg-subtle')}
-        />
+          className={clsx(
+            'mv-num w-7 shrink-0 pt-px text-ui-xs',
+            active ? 'text-accent' : 'text-fg-muted',
+          )}
+        >
+          {String(index + 1).padStart(2, '0')}
+        </span>
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="flex min-w-0 items-center gap-1.5">
             <span
@@ -127,7 +140,7 @@ const RecentItem = memo(function RecentItem({
               {item.name}
             </span>
             {item.missing && (
-              <span className="shrink-0 rounded-sm bg-bg-muted px-1 text-ui-xs text-fg-muted">
+              <span className="mv-label shrink-0 border border-border px-1.5 text-[10px] text-fg-muted">
                 Missing
               </span>
             )}
@@ -145,7 +158,7 @@ const RecentItem = memo(function RecentItem({
           removeRecent(item.path);
         }}
         className={clsx(
-          'absolute top-1.5 right-1.5 flex size-5 items-center justify-center rounded-sm text-fg-subtle',
+          'absolute top-1.5 right-1 flex size-5.5 items-center justify-center text-fg-subtle',
           'opacity-0 transition-opacity duration-100 group-hover:opacity-100 focus-visible:opacity-100',
           'hover:bg-bg-muted hover:text-fg',
         )}

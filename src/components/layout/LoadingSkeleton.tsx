@@ -24,7 +24,7 @@ export function LoadingSkeleton() {
           <div
             // The skeleton is static; its index is its identity.
             key={index}
-            className={`animate-shimmer mb-3 h-3.5 rounded-sm bg-bg-muted ${line}`}
+            className={`animate-shimmer mb-3 h-3.5 bg-bg-muted ${line}`}
           />
         ))}
       </div>

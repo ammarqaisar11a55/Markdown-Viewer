@@ -11,26 +11,31 @@ export interface ButtonProps extends ComponentPropsWithRef<'button'> {
   icon?: ReactNode;
 }
 
+/*
+ * Buttons are wireframe objects: square, hairline-bordered, condensed label.
+ * The primary is the one solid object on the board — an accent fill that keeps
+ * the square corners and wears the `+` registration marks.
+ */
 const VARIANTS: Record<ButtonVariant, string> = {
   primary:
-    'bg-accent text-accent-fg hover:brightness-[1.06] active:brightness-95 border border-transparent',
+    'mv-marks border border-accent-solid bg-accent-solid text-accent-solid-fg hover:bg-accent-solid-hover active:bg-accent-solid-active',
   secondary:
-    'bg-bg-elevated text-fg border border-border-strong/80 hover:bg-bg-muted active:bg-bg-muted',
-  ghost: 'text-fg-muted border border-transparent hover:bg-bg-muted hover:text-fg',
+    'border border-border bg-transparent text-fg hover:bg-bg-muted hover:border-border-strong active:bg-bg-inset',
+  ghost: 'border border-transparent bg-transparent text-accent hover:bg-accent-subtle',
   danger:
-    'bg-bg-elevated text-danger border border-border-strong/80 hover:bg-danger-subtle hover:border-danger/40',
+    'border border-border bg-transparent text-danger hover:bg-danger-subtle hover:border-danger/50',
 };
 
 const SIZES: Record<ButtonSize, string> = {
-  sm: 'h-7 gap-1.5 px-2.5 text-ui-sm [&_svg]:size-3.5',
-  md: 'h-8 gap-2 px-3 text-ui [&_svg]:size-4',
+  sm: 'h-7 gap-1.5 px-2.5 text-ui [&_svg]:size-3.5',
+  md: 'h-8 gap-2 px-3.5 text-ui-lg [&_svg]:size-4',
 };
 
 const buttonClassName = (variant: ButtonVariant, size: ButtonSize) =>
   clsx(
-    'inline-flex shrink-0 items-center justify-center rounded-md font-medium whitespace-nowrap',
-    'transition-[background-color,border-color,color,filter] duration-100',
-    'disabled:pointer-events-none disabled:opacity-50',
+    'inline-flex shrink-0 items-center justify-center font-heading font-semibold whitespace-nowrap',
+    'transition-[background-color,border-color,color] duration-100',
+    'disabled:pointer-events-none disabled:opacity-45',
     VARIANTS[variant],
     SIZES[size],
   );

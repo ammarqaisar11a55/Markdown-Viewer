@@ -176,15 +176,13 @@ export function Tooltip({
             style={HIDDEN}
             className={clsx(
               'animate-fade-in pointer-events-none fixed z-[100] flex max-w-80 items-center gap-2',
-              'rounded-md border border-border bg-bg-elevated px-2 py-1 text-ui-sm text-fg',
+              'border border-border bg-bg-elevated px-2 py-1.5 text-ui-sm text-fg',
               'shadow-(--shadow-popover)',
             )}
           >
             <span className="break-words">{label}</span>
             {shortcut && (
-              <span className="tabular shrink-0 font-sans text-ui-xs text-fg-subtle">
-                {shortcut}
-              </span>
+              <span className="mv-num shrink-0 text-ui-xs text-fg-muted">{shortcut}</span>
             )}
           </div>,
           document.body,

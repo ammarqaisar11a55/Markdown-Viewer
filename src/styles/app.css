@@ -1,10 +1,22 @@
 /*
  * Application stylesheet: Tailwind entry, design tokens, fonts and base styles.
  * Reading typography lives in ./markdown.css and consumes the tokens below.
+ *
+ * Visual language: "Industry" — a technical wireframe. Square corners,
+ * hairline borders, `+` registration marks on framed objects, one steel accent,
+ * Barlow Condensed headings over Barlow, thin-stroke icons. Fonts are bundled
+ * (no network imports).
  */
 @import 'tailwindcss';
-@import '@fontsource-variable/inter';
-@import '@fontsource-variable/inter/wght-italic.css';
+@import '@fontsource/barlow/400.css';
+@import '@fontsource/barlow/400-italic.css';
+@import '@fontsource/barlow/500.css';
+@import '@fontsource/barlow/600.css';
+@import '@fontsource/barlow/700.css';
+@import '@fontsource/barlow/700-italic.css';
+@import '@fontsource/barlow-condensed/400.css';
+@import '@fontsource/barlow-condensed/600.css';
+@import '@fontsource/barlow-condensed/700.css';
 @import '@fontsource-variable/jetbrains-mono';
 @import '@fontsource-variable/source-serif-4';
 @import '@fontsource-variable/source-serif-4/wght-italic.css';
@@ -16,9 +28,8 @@
 /* Static tokens (always emitted so markdown.css can consume them)           */
 /* ------------------------------------------------------------------------ */
 @theme static {
-  --font-sans:
-    'Inter Variable', system-ui, -apple-system, 'Segoe UI', Roboto, Ubuntu, 'Helvetica Neue', Arial,
-    sans-serif;
+  --font-sans: 'Barlow', system-ui, -apple-system, 'Segoe UI', Roboto, Ubuntu, sans-serif;
+  --font-heading: 'Barlow Condensed', 'Barlow', system-ui, 'Segoe UI Condensed', sans-serif;
   --font-serif:
     'Source Serif 4 Variable', 'Iowan Old Style', 'Palatino Linotype', Georgia, Cambria,
     'Times New Roman', serif;
@@ -26,9 +37,11 @@
     'JetBrains Mono Variable', ui-monospace, 'SFMono-Regular', 'Cascadia Code', Consolas,
     'Liberation Mono', Menlo, monospace;
 
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 10px;
+  /* Blueprint objects are square. The names stay so every `rounded-*`
+     utility in the app keeps resolving. */
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
 
   /* UI type scale: 13px base, compact chrome. */
   --text-ui-xs: 11px;
@@ -36,7 +49,7 @@
   --text-ui-sm: 12px;
   --text-ui-sm--line-height: 16px;
   --text-ui: 13px;
-  --text-ui--line-height: 20px;
+  --text-ui--line-height: 19px;
   --text-ui-lg: 15px;
   --text-ui-lg--line-height: 22px;
 
@@ -58,9 +71,14 @@
   --color-accent: var(--accent);
   --color-accent-fg: var(--accent-fg);
   --color-accent-subtle: var(--accent-subtle);
+  --color-accent-solid: var(--accent-solid);
+  --color-accent-solid-hover: var(--accent-solid-hover);
+  --color-accent-solid-active: var(--accent-solid-active);
+  --color-accent-solid-fg: var(--accent-solid-fg);
   --color-link: var(--link);
   --color-link-hover: var(--link-hover);
   --color-focus-ring: var(--focus-ring);
+  --color-mark: var(--mark);
   --color-danger: var(--danger);
   --color-danger-subtle: var(--danger-subtle);
   --color-warning: var(--warning);
@@ -73,58 +91,100 @@
 }
 
 /* ------------------------------------------------------------------------ */
+/* Tonal ramps                                                              */
+/* ------------------------------------------------------------------------ */
+/* Generated in OKLCH on one shared lightness scale, so the same step of any
+   role matches the others in value. The ramps are absolute: both themes read
+   the same steps and pick different ends of them. */
+:root {
+  --neutral-100: #f5f5f8;
+  --neutral-200: #e7e7ea;
+  --neutral-300: #d4d4d7;
+  --neutral-400: #b7b7ba;
+  --neutral-500: #98989b;
+  --neutral-600: #7a7a7d;
+  --neutral-700: #5d5d60;
+  --neutral-800: #424244;
+  --neutral-900: #2b2b2d;
+
+  --steel-100: #eef6ff;
+  --steel-200: #d6ebff;
+  --steel-300: #b5d9fd;
+  --steel-400: #94bce3;
+  --steel-500: #749dc4;
+  --steel-600: #597ea3;
+  --steel-700: #416180;
+  --steel-800: #2c455d;
+  --steel-900: #1d2d3d;
+}
+
+/* ------------------------------------------------------------------------ */
 /* Palettes                                                                 */
 /* ------------------------------------------------------------------------ */
 :root {
   color-scheme: light;
 
-  --bg: #ffffff;
-  --bg-subtle: #f6f7f9;
-  --bg-muted: #eceef2;
-  --bg-elevated: #ffffff;
-  --bg-inset: #f3f4f7;
+  --bg: #f2f2f3;
+  --bg-subtle: #eaeaeb;
+  --bg-muted: color-mix(in srgb, var(--fg) 6%, transparent);
+  --bg-elevated: #f2f2f3;
+  --bg-inset: #e9e9ea;
 
-  --border: #e3e6eb;
-  --border-strong: #cdd2da;
+  --border: color-mix(in srgb, var(--fg) 16%, transparent);
+  --border-strong: color-mix(in srgb, var(--fg) 34%, transparent);
+  /* Registration marks sit on the ground, outside the object they frame. */
+  --mark: color-mix(in srgb, var(--fg) 55%, transparent);
 
-  --fg: #1c2029;
-  --fg-muted: #555d6c;
-  --fg-subtle: #858c99;
+  --fg: #1d1f20;
+  --fg-muted: color-mix(in srgb, var(--fg) 68%, transparent);
+  --fg-subtle: color-mix(in srgb, var(--fg) 52%, transparent);
 
-  --accent: #2f6fde;
-  --accent-fg: #ffffff;
-  --accent-subtle: #e7eefc;
-  --link: #2863cf;
-  --link-hover: #1a4ea8;
-  --focus-ring: rgb(47 111 222 / 0.6);
-  --selection: rgb(47 111 222 / 0.18);
+  --accent: #5980a6;
+  --accent-fg: #f2f2f3;
+  --accent-subtle: color-mix(in srgb, var(--accent) 13%, transparent);
+  /* The one solid object on the board. A deep ramp step so 13px labels on it
+     clear AA; the accent itself is tuned for chrome, not for body-size text. */
+  --accent-solid: var(--steel-700);
+  --accent-solid-hover: var(--steel-800);
+  --accent-solid-active: var(--steel-900);
+  --accent-solid-fg: #f2f2f3;
+  --link: #416180;
+  --link-hover: #5980a6;
+  --focus-ring: var(--accent);
+  --selection: color-mix(in srgb, var(--accent) 30%, transparent);
 
-  --danger: #c93636;
-  --warning: #a86200;
-  --success: #1f7f3b;
-  --info: #2f6fde;
-  --danger-subtle: #fcebeb;
-  --warning-subtle: #fdf3e2;
-  --success-subtle: #e8f5ec;
-  --info-subtle: #e9f0fd;
+  --danger: #a33a32;
+  --warning: #8a6420;
+  --success: #3c6b47;
+  --info: var(--accent);
+  --danger-subtle: color-mix(in srgb, var(--danger) 11%, transparent);
+  --warning-subtle: color-mix(in srgb, var(--warning) 13%, transparent);
+  --success-subtle: color-mix(in srgb, var(--success) 11%, transparent);
+  --info-subtle: var(--accent-subtle);
 
-  --code-bg: #f6f8fa;
-  --code-border: #e4e7ec;
-  --inline-code-bg: rgb(110 120 140 / 0.12);
-  --search-match: rgb(255 204 0 / 0.42);
-  --search-current: rgb(255 140 0 / 0.7);
-  --scrollbar: rgb(80 90 110 / 0.26);
-  --scrollbar-hover: rgb(80 90 110 / 0.42);
-  --scrim: rgb(20 24 32 / 0.32);
+  --code-bg: #e9e9ea;
+  --code-border: var(--border);
+  --inline-code-bg: color-mix(in srgb, var(--fg) 7%, transparent);
+  --search-match: color-mix(in srgb, var(--accent) 28%, transparent);
+  --search-current: color-mix(in srgb, var(--accent) 62%, transparent);
+  --scrollbar: color-mix(in srgb, var(--fg) 22%, transparent);
+  --scrollbar-hover: color-mix(in srgb, var(--fg) 38%, transparent);
+  --scrim: color-mix(in srgb, var(--neutral-900) 45%, transparent);
 
-  --alert-note: #2f6fde;
-  --alert-tip: #1f883d;
-  --alert-important: #8250df;
-  --alert-warning: #9a6700;
-  --alert-caution: #cf222e;
+  /* Alerts are mono steel like the prototype, except the two that carry a
+     real warning — those keep their semantic role. */
+  --alert-note: var(--link);
+  --alert-tip: var(--link);
+  --alert-important: var(--link);
+  --alert-warning: var(--warning);
+  --alert-caution: var(--danger);
 
-  --shadow-popover: 0 0 0 1px rgb(20 24 32 / 0.06), 0 4px 12px -2px rgb(20 24 32 / 0.12);
-  --shadow-modal: 0 0 0 1px rgb(20 24 32 / 0.06), 0 16px 48px -8px rgb(20 24 32 / 0.24);
+  /* Elevation, tuned to the ground: ink-tinted shadows on the light theme. */
+  --elev-sm: 0 1px 2px color-mix(in srgb, var(--neutral-900) 14%, transparent);
+  --elev-md: 0 3px 10px color-mix(in srgb, var(--neutral-900) 16%, transparent);
+  --elev-lg: 0 12px 32px color-mix(in srgb, var(--neutral-900) 22%, transparent);
+  --shadow-popover: var(--elev-md);
+  --shadow-modal: var(--elev-lg);
 
   --transition-theme:
     background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, fill 0.2s ease;
@@ -133,53 +193,39 @@
 [data-theme='dark'] {
   color-scheme: dark;
 
-  --bg: #16181d;
-  --bg-subtle: #1b1e24;
-  --bg-muted: #262a33;
-  --bg-elevated: #1f232a;
-  --bg-inset: #121418;
+  --bg: #1d1f20;
+  --bg-subtle: #232526;
+  --bg-elevated: #1d1f20;
+  --bg-inset: #2b2b2d;
 
-  --border: #2a2e37;
-  --border-strong: #3b404c;
+  --fg: #e7e7ea;
 
-  --fg: #d9dde5;
-  --fg-muted: #9ba3b2;
-  --fg-subtle: #6d7484;
+  --accent: #749dc4;
+  --accent-fg: #1d1f20;
+  --accent-subtle: color-mix(in srgb, var(--accent) 18%, transparent);
+  /* On the dark ground the accent itself carries text at 5.8:1. */
+  --accent-solid: var(--accent);
+  --accent-solid-hover: var(--steel-400);
+  --accent-solid-active: var(--steel-300);
+  --accent-solid-fg: #1d1f20;
+  --link: #b5d9fd;
+  --link-hover: #d6ebff;
 
-  --accent: #6ea3ff;
-  --accent-fg: #0c1322;
-  --accent-subtle: rgb(110 163 255 / 0.15);
-  --link: #7eadff;
-  --link-hover: #a8c7ff;
-  --focus-ring: rgb(110 163 255 / 0.7);
-  --selection: rgb(110 163 255 / 0.3);
+  --danger: #dd8b82;
+  --warning: #d8b166;
+  --success: #87c096;
+  --danger-subtle: color-mix(in srgb, var(--danger) 15%, transparent);
+  --warning-subtle: color-mix(in srgb, var(--warning) 15%, transparent);
+  --success-subtle: color-mix(in srgb, var(--success) 15%, transparent);
 
-  --danger: #f0727a;
-  --warning: #e2aa4f;
-  --success: #62c07d;
-  --info: #6ea3ff;
-  --danger-subtle: rgb(240 114 122 / 0.13);
-  --warning-subtle: rgb(226 170 79 / 0.13);
-  --success-subtle: rgb(98 192 125 / 0.13);
-  --info-subtle: rgb(110 163 255 / 0.13);
+  --code-bg: #26282a;
+  --inline-code-bg: color-mix(in srgb, var(--fg) 10%, transparent);
+  --scrim: rgb(0 0 0 / 0.6);
 
-  --code-bg: #1c1f26;
-  --code-border: #2a2e37;
-  --inline-code-bg: rgb(150 160 180 / 0.15);
-  --search-match: rgb(230 180 40 / 0.34);
-  --search-current: rgb(255 150 40 / 0.62);
-  --scrollbar: rgb(170 180 200 / 0.2);
-  --scrollbar-hover: rgb(170 180 200 / 0.34);
-  --scrim: rgb(0 0 0 / 0.5);
-
-  --alert-note: #6ea3ff;
-  --alert-tip: #62c07d;
-  --alert-important: #b392f0;
-  --alert-warning: #e2aa4f;
-  --alert-caution: #f0727a;
-
-  --shadow-popover: 0 0 0 1px rgb(0 0 0 / 0.4), 0 6px 16px -2px rgb(0 0 0 / 0.45);
-  --shadow-modal: 0 0 0 1px rgb(0 0 0 / 0.45), 0 20px 56px -8px rgb(0 0 0 / 0.6);
+  /* A hairline edge plus ambient darkness, rather than an ink tint. */
+  --elev-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+  --elev-md: 0 4px 14px rgb(0 0 0 / 0.45);
+  --elev-lg: 0 16px 40px rgb(0 0 0 / 0.55);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -202,8 +248,7 @@
   html {
     font-family: var(--font-sans);
     font-size: 13px;
-    line-height: 20px;
-    font-feature-settings: 'cv11', 'ss01';
+    line-height: 19px;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
@@ -226,6 +271,18 @@
     transition: var(--transition-theme);
   }
 
+  /* Condensed headings over Barlow body text. */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
   input,
   textarea,
   [contenteditable='true'],
@@ -241,6 +298,11 @@
   button {
     font: inherit;
     color: inherit;
+  }
+
+  /* Lucide at stroke-width 1.5: a lighter, more technical line. */
+  svg.lucide {
+    stroke-width: 1.5;
   }
 
   button:not(:disabled),
@@ -265,8 +327,8 @@
 
   :focus-visible {
     outline: 2px solid var(--focus-ring);
-    outline-offset: 1px;
-    border-radius: var(--radius-sm);
+    outline-offset: 2px;
+    border-radius: 0;
   }
 
   .focus-inset:focus-visible {
@@ -292,7 +354,7 @@
   ::-webkit-scrollbar-thumb {
     background-color: var(--scrollbar);
     border: 3px solid transparent;
-    border-radius: 999px;
+    border-radius: 0;
     background-clip: padding-box;
   }
 
@@ -318,54 +380,125 @@
   .tabular {
     font-variant-numeric: tabular-nums;
   }
+
+  /* A spec-sheet label: condensed, letterspaced, uppercase. */
+  .mv-label {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  /* An index number in front of a row (tabs, outline, settings sections). */
+  .mv-num {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* The 2px bar that marks a selected row; apply it only when selected.
+     Override `--mv-bar` to change its colour. */
+  .mv-bar-left {
+    position: relative;
+  }
+
+  .mv-bar-left::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 2px;
+    background-color: var(--mv-bar, var(--accent));
+  }
+
+  /*
+   * `+` registration marks at the four corners of a framed object: four 11px
+   * crosses centred on the hairline border, drawn as eight background layers
+   * on one overlay so no extra markup is needed. Belongs on the objects the
+   * design frames — cards, dialogs, toasts, the primary button — not on
+   * every surface.
+   */
+  .mv-marks {
+    position: relative;
+  }
+
+  .mv-marks::after {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    pointer-events: none;
+    background-image:
+      linear-gradient(var(--mark), var(--mark)), linear-gradient(var(--mark), var(--mark)),
+      linear-gradient(var(--mark), var(--mark)), linear-gradient(var(--mark), var(--mark)),
+      linear-gradient(var(--mark), var(--mark)), linear-gradient(var(--mark), var(--mark)),
+      linear-gradient(var(--mark), var(--mark)), linear-gradient(var(--mark), var(--mark));
+    background-size:
+      1px 11px,
+      11px 1px,
+      1px 11px,
+      11px 1px,
+      1px 11px,
+      11px 1px,
+      1px 11px,
+      11px 1px;
+    background-position:
+      left 5px top 0,
+      left 0 top 5px,
+      right 5px top 0,
+      right 0 top 5px,
+      left 5px bottom 0,
+      left 0 bottom 5px,
+      right 5px bottom 0,
+      right 0 bottom 5px;
+    background-repeat: no-repeat;
+  }
 }
 
+/* ------------------------------------------------------------------------ */
+/* Range input (Settings sliders)                                           */
+/* ------------------------------------------------------------------------ */
 .mv-slider::-webkit-slider-runnable-track {
-  height: 4px;
-  border-radius: 999px;
+  height: 3px;
   background: linear-gradient(
     to right,
     var(--accent) 0 var(--fill, 0%),
-    var(--bg-muted) var(--fill, 0%) 100%
+    color-mix(in srgb, var(--fg) 18%, transparent) var(--fill, 0%) 100%
   );
 }
 
 .mv-slider::-moz-range-track {
-  height: 4px;
-  border-radius: 999px;
-  background: var(--bg-muted);
+  height: 3px;
+  background: color-mix(in srgb, var(--fg) 18%, transparent);
 }
 
 .mv-slider::-moz-range-progress {
-  height: 4px;
-  border-radius: 999px;
+  height: 3px;
   background: var(--accent);
 }
 
 .mv-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 14px;
-  height: 14px;
-  margin-top: -5px;
-  border-radius: 999px;
-  border: 1px solid var(--border-strong);
-  background: var(--bg-elevated);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.15);
+  width: 9px;
+  height: 16px;
+  margin-top: -6.5px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
   transition: transform 100ms ease;
 }
 
 .mv-slider::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
-  border-radius: 999px;
-  border: 1px solid var(--border-strong);
-  background: var(--bg-elevated);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.15);
+  width: 9px;
+  height: 16px;
+  border-radius: 0;
+  border: 1px solid var(--accent);
+  background: var(--accent);
 }
 
 .mv-slider:active::-webkit-slider-thumb {
-  transform: scale(1.1);
+  transform: scaleY(1.12);
 }
 
 .mv-slider:focus-visible {
@@ -387,7 +520,7 @@
 @keyframes mv-pop-in {
   from {
     opacity: 0;
-    transform: translateY(-4px) scale(0.98);
+    transform: translateY(-4px);
   }
   to {
     opacity: 1;

@@ -8,6 +8,37 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-10-24
+
+### Changed
+
+- New look, based on the Industry design system: a technical, blueprint-style
+  interface on a light ground or a deep slate dark theme, with square corners,
+  hairline borders, registration marks on framed objects and a single steel
+  accent. Headings are set in Barlow Condensed over Barlow, code stays in
+  JetBrains Mono, and both fonts are bundled so the app remains fully offline.
+- The reading sheet, code blocks, tables, alerts and dialogs were all retuned
+  to match; reading measure, font size, code size and zoom settings behave
+  exactly as before.
+- The sidebar is now an icon rail (Outline, Files, Recent, then theme and
+  settings) beside a panel with its own header and per-view actions, and the
+  tab bar carries a Quick Open field.
+- Settings is a two-pane dialog: numbered sections on the left, their rows on
+  the right. Every setting, label and description is unchanged.
+- Nothing about how the app works changed: the same shortcuts, tabs, search,
+  editing, updates and file handling.
+
+### Added
+
+- An available update now shows what changed. Release notes come from this
+  file's entry for the new version, and the app renders them — safely, as
+  text rather than HTML — in Settings and from the update notice.
+
+### Fixed
+
+- Ordered lists lost their numbers because of a CSS reset; they are numbered
+  again.
+
 ## [1.3.1] - 2026-10-23
 
 ### Fixed
@@ -160,7 +191,8 @@ Initial release.
 - Remote image loading can be disabled; insecure `http:` images are always
   blocked.
 
-[Unreleased]: https://github.com/ammarqaisar11a55/Markdown-Viewer/compare/v1.3.1...HEAD
+[Unreleased]: https://github.com/ammarqaisar11a55/Markdown-Viewer/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/ammarqaisar11a55/Markdown-Viewer/releases/tag/v1.4.0
 [1.3.1]: https://github.com/ammarqaisar11a55/Markdown-Viewer/releases/tag/v1.3.1
 [1.3.0]: https://github.com/ammarqaisar11a55/Markdown-Viewer/releases/tag/v1.3.0
 [1.2.0]: https://github.com/ammarqaisar11a55/Markdown-Viewer/releases/tag/v1.2.0

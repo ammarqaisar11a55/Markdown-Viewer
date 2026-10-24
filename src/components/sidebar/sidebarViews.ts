@@ -6,6 +6,3 @@ export const SIDEBAR_VIEWS: readonly { value: SidebarView; label: string; icon: 
   { value: 'files', label: 'Files', icon: FolderTree },
   { value: 'recent', label: 'Recent', icon: Clock },
 ];
-
-export const sidebarTabId = (view: SidebarView) => `sidebar-tab-${view}`;
-export const sidebarPanelId = (view: SidebarView) => `sidebar-panel-${view}`;

@@ -55,6 +55,19 @@ jobs:
 
       - run: npm ci
 
+      # The release body becomes `notes` in latest.json, which the in-app
+      # updater shows as "what's new", so it carries this version's CHANGELOG
+      # section rather than a pointer to the file.
+      - name: Collect the release notes
+        id: notes
+        shell: bash
+        run: |
+          {
+            echo 'body<<RELEASE_NOTES_EOF'
+            node scripts/release-notes.mjs "${{ env.TAG }}"
+            echo 'RELEASE_NOTES_EOF'
+          } >> "$GITHUB_OUTPUT"
+
       # `bundle.createUpdaterArtifacts` is on, so the bundler signs every update
       # artifact and refuses to build without the private key. Checking first
       # turns a confusing bundler failure near the end of the build into a clear
@@ -86,7 +99,7 @@ jobs:
           releaseName: Markdown Viewer ${{ env.TAG }}
           # Hyphenated, space-free asset names.
           assetNamePattern: Markdown-Viewer_[version]_[platform]_[arch][setup][ext]
-          releaseBody: See CHANGELOG.md for the changes in this release.
+          releaseBody: ${{ steps.notes.outputs.body }}
           releaseDraft: false
           prerelease: false
           args: --bundles ${{ matrix.bundles }}

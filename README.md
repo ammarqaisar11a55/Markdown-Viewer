@@ -56,7 +56,9 @@ input.
   and a copy button on every code block.
 - Relative, absolute and remote (HTTPS) images, with an accessible placeholder
   for missing images and a click-to-zoom lightbox.
-- Carefully designed light and dark themes, or follow the system theme.
+- A technical, blueprint-inspired interface — square corners, hairline rules
+  and a single steel accent — in carefully designed light and dark themes, or
+  following the system theme.
 - Sans-serif or serif reading font, adjustable font size, code font size,
   content width and zoom.
 - Reading mode that hides everything except the document.

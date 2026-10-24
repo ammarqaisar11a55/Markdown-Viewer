@@ -15,6 +15,8 @@ export interface ModalProps {
   children: ReactNode;
   footer?: ReactNode;
   size?: 'sm' | 'md' | 'lg';
+  /** Scale of the visible title; `lg` is the Settings header. */
+  titleSize?: 'md' | 'lg';
   /** Element focused when the dialog opens; defaults to the first tabbable. */
   initialFocusRef?: RefObject<HTMLElement | null>;
   /** Align the dialog towards the top (command-palette style). */
@@ -23,6 +25,7 @@ export interface ModalProps {
 }
 
 const WIDTHS = { sm: 'max-w-sm', md: 'max-w-lg', lg: 'max-w-2xl' } as const;
+const TITLE_SIZES = { md: 'text-[22px]', lg: 'text-[26px]' } as const;
 
 export function Modal(props: ModalProps) {
   if (!props.open) return null;
@@ -37,6 +40,7 @@ function ModalContent({
   children,
   footer,
   size = 'md',
+  titleSize = 'md',
   initialFocusRef,
   placement = 'center',
   className,
@@ -98,7 +102,9 @@ function ModalContent({
         aria-describedby={description ? descriptionId : undefined}
         tabIndex={-1}
         className={clsx(
-          'animate-pop-in flex max-h-full w-full flex-col overflow-hidden rounded-lg',
+          // The frame draws its registration marks outside the box, so the
+          // dialog itself must not clip; its body scrolls instead.
+          'animate-pop-in mv-marks flex max-h-full w-full flex-col',
           'border border-border bg-bg-elevated text-fg shadow-(--shadow-modal)',
           WIDTHS[size],
           className,
@@ -109,9 +115,9 @@ function ModalContent({
             {title}
           </h2>
         ) : (
-          <header className="flex shrink-0 items-start gap-3 border-b border-border px-5 py-3.5">
+          <header className="flex shrink-0 items-start gap-3 border-b border-border py-3.5 pr-4 pl-5">
             <div className="min-w-0 flex-1">
-              <h2 id={titleId} className="text-ui-lg font-semibold tracking-[-0.01em]">
+              <h2 id={titleId} className={clsx('leading-none uppercase', TITLE_SIZES[titleSize])}>
                 {title}
               </h2>
               {description && (

@@ -136,7 +136,7 @@ export function FileTree({ root, label }: FileTreeProps) {
   );
 
   return (
-    <div ref={treeRef} role="tree" aria-label={label} className="flex flex-col px-2 pb-3">
+    <div ref={treeRef} role="tree" aria-label={label} className="flex flex-col pb-4">
       {nodes.map((node) => (
         <FileTreeNode
           key={node.entry.path}

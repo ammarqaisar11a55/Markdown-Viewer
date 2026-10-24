@@ -1,4 +1,4 @@
-import { BookOpen, PanelLeftOpen, Pencil, Search, Settings } from 'lucide-react';
+import { BookOpen, PanelLeftOpen, Pencil, Search } from 'lucide-react';
 import { useCallback, useEffect, useRef, type KeyboardEvent } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { getShortcutLabel, runCommand } from '@/app/commands';
@@ -6,6 +6,7 @@ import { activateTab, closeTab } from '@/features/documents/actions';
 import { useDocuments } from '@/stores/documentsStore';
 import { useUi } from '@/stores/uiStore';
 import { IconButton } from '@/components/ui/IconButton';
+import { Kbd } from '@/components/ui/Kbd';
 import { TabItem } from './TabItem';
 import { findByData } from '@/components/ui/dom';
 
@@ -84,10 +85,12 @@ export function TabBar() {
     findByData(scrollerRef.current, 'tab-id', target)?.focus();
   }, []);
 
+  const quickOpenShortcut = getShortcutLabel('file.quickOpen');
+
   return (
-    <div className="theme-surface flex h-9 shrink-0 items-stretch border-b border-border bg-bg-subtle">
+    <div className="theme-surface flex h-[44px] shrink-0 items-stretch border-b border-border bg-bg-subtle">
       {sidebarCollapsed && (
-        <div className="flex shrink-0 items-center border-r border-border px-1.5">
+        <div className="flex shrink-0 items-center border-r border-border px-2">
           <IconButton
             label="Show sidebar"
             shortcut={getShortcutLabel('view.toggleSidebar')}
@@ -106,7 +109,7 @@ export function TabBar() {
           <TabItem key={id} id={id} active={id === activeId} onKeyDown={onTabKeyDown} />
         ))}
       </div>
-      <div className="flex shrink-0 items-center gap-0.5 px-1.5">
+      <div className="flex shrink-0 items-center gap-0.5 border-l border-border px-2">
         <IconButton
           label="Find in document"
           shortcut={getShortcutLabel('view.find')}
@@ -133,12 +136,17 @@ export function TabBar() {
           disabled={!hasActive}
           onClick={() => void runCommand('view.readingMode')}
         />
-        <IconButton
-          label="Settings"
-          shortcut={getShortcutLabel('app.settings')}
-          icon={<Settings />}
-          onClick={() => void runCommand('app.settings')}
-        />
+      </div>
+      <div className="flex shrink-0 items-center border-l border-border px-2.5">
+        <button
+          type="button"
+          onClick={() => void runCommand('file.quickOpen')}
+          className="flex h-[30px] w-[230px] items-center gap-2 border border-border bg-bg py-0 pr-1.5 pl-2.5 text-left text-ui text-fg-muted hover:border-border-strong"
+        >
+          <Search aria-hidden className="size-3.5 shrink-0" />
+          <span className="flex-1 truncate">Quick Open</span>
+          {quickOpenShortcut !== undefined && <Kbd shortcut={quickOpenShortcut} />}
+        </button>
       </div>
     </div>
   );

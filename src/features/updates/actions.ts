@@ -9,6 +9,7 @@ import { logger } from '@/lib/platform/logger';
 import { revealInFolder } from '@/lib/platform/system';
 import { useSettings } from '@/stores/settingsStore';
 import { dismissToast, toast } from '@/stores/toastStore';
+import { useUi } from '@/stores/uiStore';
 import { hydrateUpdates, useUpdates } from '@/stores/updatesStore';
 import type { AppError } from '@/types';
 import {
@@ -83,6 +84,12 @@ async function currentFlavor(): Promise<InstallFlavor> {
   }
 }
 
+/** Opens the Settings dialog, where the notes and the install action live. */
+function showWhatsNew(): void {
+  dismissToast(UPDATE_TOAST_ID);
+  useUi.getState().setSettingsOpen(true);
+}
+
 async function announce(update: PendingUpdate): Promise<void> {
   const notes = update.body?.trim() ?? '';
   useUpdates.getState().foundUpdate(update.version, notes === '' ? null : notes);
@@ -94,6 +101,9 @@ async function announce(update: PendingUpdate): Promise<void> {
     durationMs: null,
     actions: [
       { label: 'Install', primary: true, onClick: () => void installUpdate() },
+      // The release notes are in Settings; the dialog opens on that section
+      // while an update is on offer.
+      { label: 'What’s New', onClick: showWhatsNew },
       { label: 'Later', onClick: () => dismissToast(UPDATE_TOAST_ID) },
     ],
   });

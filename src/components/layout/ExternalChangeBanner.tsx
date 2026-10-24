@@ -8,7 +8,7 @@ export interface ExternalChangeBannerProps {
 }
 
 const actionClass =
-  'h-6 rounded-sm px-2 text-ui-sm font-medium transition-colors duration-100 hover:bg-bg-muted';
+  'font-heading h-6 border border-border px-2.5 text-ui font-semibold transition-colors duration-100 hover:bg-bg-muted';
 
 export function ExternalChangeBanner({ tabId, kind }: ExternalChangeBannerProps) {
   const removed = kind === 'removed';
@@ -17,7 +17,7 @@ export function ExternalChangeBanner({ tabId, kind }: ExternalChangeBannerProps)
     <div
       role="status"
       className={clsx(
-        'flex h-9 shrink-0 items-center gap-2.5 border-b border-border px-3 text-ui',
+        'flex h-9 shrink-0 items-center gap-2.5 border-b border-border px-3.5 text-ui',
         removed ? 'bg-danger-subtle' : 'bg-warning-subtle',
       )}
     >

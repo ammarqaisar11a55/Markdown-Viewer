@@ -37,7 +37,7 @@ function AboutContent() {
   return (
     <div className="flex flex-col items-center px-6 pt-8 pb-6 text-center">
       <AppMark className="size-14" />
-      <p className="mt-4 font-serif text-[22px] leading-7 font-semibold tracking-[-0.01em]">
+      <p className="mt-4 font-heading text-[26px] leading-none font-semibold tracking-[0.02em] uppercase">
         Markdown Viewer
       </p>
       <p className="selectable tabular mt-1 text-ui-sm text-fg-muted">
@@ -45,7 +45,7 @@ function AboutContent() {
       </p>
       <button
         type="button"
-        className="mt-1 rounded-sm text-ui-sm text-link hover:text-link-hover hover:underline"
+        className="mt-1 text-ui-sm text-link hover:text-link-hover hover:underline"
         onClick={() => void checkForUpdates({ manual: true })}
       >
         Check for updates
@@ -57,7 +57,7 @@ function AboutContent() {
         {STACK.map((item) => (
           <li
             key={item}
-            className="rounded-sm border border-border bg-bg-inset px-1.5 py-0.5 text-ui-xs text-fg-muted"
+            className="border border-border bg-bg-inset px-2 py-0.5 text-ui-xs text-fg-muted"
           >
             {item}
           </li>

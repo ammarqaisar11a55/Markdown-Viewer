@@ -65,11 +65,9 @@ export const TabItem = memo(function TabItem({ id, active, onKeyDown }: TabItemP
         }}
         onContextMenu={onContextMenu}
         className={clsx(
-          'focus-inset group relative flex h-full max-w-[220px] min-w-[112px] items-center gap-1.5 border-r border-border pr-1.5 pl-3',
+          'focus-inset group relative flex h-full max-w-[236px] min-w-[132px] items-center gap-2 border-r border-border pr-1.5 pl-3',
           'text-ui transition-colors duration-100',
-          active
-            ? 'bg-bg text-fg'
-            : 'bg-transparent text-fg-muted hover:bg-bg-muted/60 hover:text-fg',
+          active ? 'bg-bg text-fg' : 'bg-transparent text-fg-muted hover:text-fg',
         )}
       >
         {active && <span aria-hidden className="absolute inset-x-0 top-0 h-[2px] bg-accent" />}
@@ -85,7 +83,7 @@ export const TabItem = memo(function TabItem({ id, active, onKeyDown }: TabItemP
             <span
               aria-hidden
               className={clsx(
-                'size-2 rounded-full group-hover:opacity-0',
+                'size-[7px] group-hover:opacity-0',
                 dirty ? 'bg-accent' : 'bg-warning',
               )}
             />
@@ -99,7 +97,7 @@ export const TabItem = memo(function TabItem({ id, active, onKeyDown }: TabItemP
               void closeTab(id);
             }}
             className={clsx(
-              'absolute inset-0 flex items-center justify-center rounded-sm text-fg-subtle',
+              'absolute inset-0 flex items-center justify-center text-fg-subtle',
               'transition-colors duration-100 hover:bg-bg-muted hover:text-fg',
               active || changed || dirty
                 ? ''

@@ -4,6 +4,7 @@ import { resetStorageForTests } from '@/lib/platform/storage';
 import { useDocuments } from '@/stores/documentsStore';
 import { updateSettings } from '@/stores/settingsStore';
 import { useToasts } from '@/stores/toastStore';
+import { useUi } from '@/stores/uiStore';
 import { INITIAL_UPDATES_STATE, useUpdates } from '@/stores/updatesStore';
 import { flushPromises, makeDoc, mockBackend, resetAppState } from '@/test/state';
 import { setTauriRuntime } from '@/test/tauri';
@@ -184,9 +185,11 @@ describe('checkForUpdates', () => {
       durationMs: null,
       variant: 'info',
     });
-    expect(item?.actions.map((action) => action.label)).toEqual(['Install', 'Later']);
+    expect(item?.actions.map((action) => action.label)).toEqual(['Install', 'What’s New', 'Later']);
 
-    item?.actions[1]?.onClick();
+    // "What’s New" sends the user to the notes in Settings.
+    item?.actions.find((action) => action.label === 'What’s New')?.onClick();
+    expect(useUi.getState().settingsOpen).toBe(true);
     expect(useToasts.getState().toasts).toEqual([]);
   });
 

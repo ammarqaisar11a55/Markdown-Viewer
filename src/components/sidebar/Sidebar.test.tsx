@@ -8,7 +8,8 @@ import { Sidebar } from './Sidebar';
 vi.mock('@/app/commands', async () => {
   const { useUi: ui } = await import('@/stores/uiStore');
   return {
-    getShortcutLabel: (id: string) => ({ 'view.toggleSidebar': 'Ctrl+B' })[id],
+    getShortcutLabel: (id: string) =>
+      ({ 'view.toggleSidebar': 'Ctrl+B', 'file.open': 'Ctrl+O', 'app.settings': 'Ctrl+,' })[id],
     runCommand: vi.fn((id: string) => {
       if (id === 'view.toggleSidebar') ui.getState().toggleSidebar();
       return Promise.resolve();
@@ -19,6 +20,7 @@ vi.mock('@/app/commands', async () => {
 const documentActions = vi.hoisted(() => ({
   openDocument: vi.fn(() => Promise.resolve()),
   openFileDialog: vi.fn(() => Promise.resolve()),
+  createFileDialog: vi.fn(() => Promise.resolve()),
 }));
 vi.mock('@/features/documents/actions', () => documentActions);
 
@@ -54,49 +56,60 @@ describe('Sidebar', () => {
     });
   });
 
-  it('renders the header, actions and view switcher', async () => {
-    const user = userEvent.setup();
+  it('renders the rail with the view switch and the app buttons', () => {
     render(<Sidebar />);
+    expect(screen.getByRole('navigation', { name: 'Views' })).toBeInTheDocument();
     expect(screen.getByRole('complementary', { name: 'Sidebar' })).toBeInTheDocument();
-    expect(screen.getByText('Markdown Viewer')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'About Markdown Viewer' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Sidebar views' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Hide sidebar' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Switch to dark theme' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Settings' })).toBeInTheDocument();
+  });
 
+  it('offers Open File and Open Folder in the Files panel', async () => {
+    const user = userEvent.setup();
+    useUi.setState({ sidebarView: 'files' });
+    render(<Sidebar />);
     await user.click(screen.getByRole('button', { name: 'Open File' }));
     expect(documentActions.openFileDialog).toHaveBeenCalled();
     await user.click(screen.getByRole('button', { name: 'Open Folder' }));
     expect(folderActions.openFolderDialog).toHaveBeenCalled();
   });
 
-  it('collapses with the hide button', async () => {
-    const user = userEvent.setup();
-    const { container } = render(<Sidebar />);
-    await user.click(screen.getByRole('button', { name: 'Hide sidebar' }));
-    expect(useUi.getState().sidebarCollapsed).toBe(true);
-    expect(container).toBeEmptyDOMElement();
-  });
-
-  it('renders nothing while collapsed', () => {
-    useUi.setState({ sidebarCollapsed: true });
-    const { container } = render(<Sidebar />);
-    expect(container).toBeEmptyDOMElement();
-  });
-
-  it('switches views with the ARIA tabs (click and arrow keys)', async () => {
+  it('hides the panel but keeps the rail when collapsed', async () => {
     const user = userEvent.setup();
     render(<Sidebar />);
-    const outline = screen.getByRole('tab', { name: 'Outline' });
-    expect(outline).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('tabpanel')).toHaveAccessibleName('Outline');
+    await user.click(screen.getByRole('button', { name: 'Hide sidebar' }));
+    expect(useUi.getState().sidebarCollapsed).toBe(true);
+    expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: 'Views' })).toBeInTheDocument();
+  });
 
-    await user.click(screen.getByRole('tab', { name: 'Recent' }));
+  it('renders only the rail while collapsed', () => {
+    useUi.setState({ sidebarCollapsed: true });
+    render(<Sidebar />);
+    expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: 'Views' })).toBeInTheDocument();
+  });
+
+  it('switches views from the rail (click and arrow keys)', async () => {
+    const user = userEvent.setup();
+    render(<Sidebar />);
+    expect(screen.getByRole('button', { name: 'Outline' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('heading', { name: 'Outline' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Recent' }));
     expect(useUi.getState().sidebarView).toBe('recent');
-    expect(screen.getByRole('tabpanel')).toHaveAccessibleName('Recent');
+    expect(screen.getByRole('heading', { name: 'Recent' })).toBeInTheDocument();
     expect(screen.getByText('No recent files')).toBeInTheDocument();
 
-    await user.keyboard('{ArrowRight}');
+    await user.keyboard('{ArrowDown}');
     expect(useUi.getState().sidebarView).toBe('outline');
-    expect(screen.getByRole('tab', { name: 'Outline' })).toHaveFocus();
-    await user.keyboard('{ArrowRight}');
+    expect(screen.getByRole('button', { name: 'Outline' })).toHaveFocus();
+    await user.keyboard('{ArrowDown}');
     expect(useUi.getState().sidebarView).toBe('files');
+    expect(screen.getByRole('heading', { name: 'Files' })).toBeInTheDocument();
     expect(screen.getByText('No folder open')).toBeInTheDocument();
   });
 

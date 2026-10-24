@@ -199,12 +199,12 @@ function SearchPanel() {
       ref={panelRef}
       role="search"
       className={clsx(
-        'absolute top-3 right-5 z-20 flex items-center gap-0.5 rounded-lg border p-1 pl-2.5',
-        'border-[var(--border)] bg-[var(--bg-elevated)] text-[var(--fg)] shadow-[var(--shadow-popover)] focus-within:border-[var(--focus-ring)]',
+        'md-marks absolute top-3.5 right-5 z-20 flex items-center gap-px border p-1 pl-2.5',
+        'border-border bg-bg text-fg shadow-(--shadow-popover) focus-within:border-accent',
       )}
       aria-label="Find in document"
     >
-      <Search aria-hidden="true" className="size-3.5 shrink-0 text-[var(--fg-subtle)]" />
+      <Search aria-hidden="true" className="size-3.5 shrink-0 text-fg-muted" />
       <input
         ref={inputRef}
         type="search"
@@ -219,8 +219,8 @@ function SearchPanel() {
         spellCheck={false}
         autoComplete="off"
         className={clsx(
-          'h-7 w-52 min-w-0 bg-transparent px-1.5 text-[13px] outline-none',
-          'placeholder:text-[var(--fg-subtle)] [&::-webkit-search-cancel-button]:hidden',
+          'h-7 w-50 min-w-0 bg-transparent px-1.5 text-ui outline-none',
+          'placeholder:text-fg-subtle [&::-webkit-search-cancel-button]:hidden',
         )}
       />
       <span
@@ -228,14 +228,14 @@ function SearchPanel() {
         role="status"
         aria-live="polite"
         className={clsx(
-          'min-w-[4.5rem] px-1.5 text-right text-[12px] whitespace-nowrap tabular-nums',
-          total === 0 && result.query !== '' ? 'text-[var(--danger)]' : 'text-[var(--fg-muted)]',
+          'min-w-18 px-1.5 text-right text-ui-sm whitespace-nowrap tabular-nums',
+          total === 0 && result.query !== '' ? 'text-danger' : 'text-fg-muted',
           pendingQuery && 'opacity-60',
         )}
       >
         {status}
       </span>
-      <span aria-hidden="true" className="mx-0.5 h-4 w-px bg-[var(--border)]" />
+      <span aria-hidden="true" className="mx-1 h-4 w-px bg-border" />
       <IconButton
         label="Match case"
         icon={<CaseSensitive />}

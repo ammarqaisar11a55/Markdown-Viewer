@@ -39,16 +39,16 @@ function EditorStatusLine({ tabId }: { tabId: string }) {
   const saveShortcut = getShortcutLabel('edit.save');
 
   return (
-    <div className="theme-surface flex h-9 shrink-0 items-center gap-2 border-t border-border bg-bg-subtle px-2 text-ui-sm">
+    <div className="theme-surface flex h-12 shrink-0 items-center gap-3.5 border-t border-border pr-3 pl-5 text-ui">
       <span
         role="status"
         aria-live="polite"
-        className="flex min-w-0 shrink-0 items-center gap-1.5 px-1 text-fg-muted"
+        className="flex min-w-0 shrink-0 items-center gap-2 text-fg"
       >
-        {dirty && !saving && <span aria-hidden className="size-2 rounded-full bg-accent" />}
+        {dirty && !saving && <span aria-hidden className="size-[7px] bg-accent" />}
         {statusLabel(saving, dirty)}
       </span>
-      <p className="hidden min-w-0 flex-1 items-center gap-1.5 truncate text-ui-xs text-fg-subtle sm:flex">
+      <p className="hidden min-w-0 flex-1 items-center gap-1.5 truncate text-ui-sm text-fg-muted sm:flex">
         {saveShortcut !== undefined && (
           <>
             <Kbd shortcut={saveShortcut} /> to save ·
@@ -165,7 +165,7 @@ function MarkdownEditorImpl({ tabId, name }: MarkdownEditorProps) {
         onScroll={(event) => {
           scrollPositions.set(tabId, event.currentTarget.scrollTop);
         }}
-        className="mx-auto block min-h-0 w-full flex-1 resize-none overflow-auto bg-transparent px-[clamp(20px,5vw,56px)] pt-[clamp(24px,5vh,56px)] pb-24 text-fg caret-accent outline-none"
+        className="md-editor-column mx-auto block min-h-0 w-full flex-1 resize-none overflow-auto bg-transparent px-[clamp(20px,5vw,56px)] pt-[clamp(24px,5vh,56px)] pb-24 text-fg caret-accent outline-none"
       />
       <EditorStatusLine tabId={tabId} />
     </div>

@@ -54,7 +54,7 @@ export function ReadingModeExit() {
         onClick={() => {
           setReadingMode(false);
         }}
-        className="flex h-8 items-center gap-2 rounded-full border border-border bg-bg-elevated/95 pr-1.5 pl-3 text-ui-sm font-medium text-fg shadow-(--shadow-popover) backdrop-blur transition-colors duration-100 hover:bg-bg-muted"
+        className="flex h-8 items-center gap-2 border border-border bg-bg-elevated/95 pr-2 pl-3 font-heading text-ui font-semibold text-fg shadow-(--elev-sm) backdrop-blur transition-colors duration-100 hover:bg-bg-muted"
       >
         <Minimize2 aria-hidden className="size-3.5 text-fg-muted" />
         Exit Reading Mode

@@ -216,7 +216,8 @@ describe('TabBar', () => {
     expect(commands.runCommand).toHaveBeenCalledWith('view.find');
     await user.click(screen.getByRole('button', { name: 'Reading mode' }));
     expect(commands.runCommand).toHaveBeenCalledWith('view.readingMode');
-    await user.click(screen.getByRole('button', { name: 'Settings' }));
-    expect(commands.runCommand).toHaveBeenCalledWith('app.settings');
+    // Settings moved to the sidebar rail; the toolbar now offers Quick Open.
+    await user.click(screen.getByRole('button', { name: /Quick Open/ }));
+    expect(commands.runCommand).toHaveBeenCalledWith('file.quickOpen');
   });
 });

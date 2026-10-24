@@ -114,7 +114,7 @@ function QuickOpenPanel({
 
   return (
     <div className="flex max-h-[min(520px,70vh)] flex-col">
-      <div className="flex h-11 shrink-0 items-center gap-2.5 border-b border-border px-3.5">
+      <div className="flex h-13 shrink-0 items-center gap-2.5 border-b border-border px-4">
         <Search aria-hidden className="size-4 shrink-0 text-fg-subtle" />
         <input
           ref={inputRef}
@@ -157,7 +157,7 @@ function QuickOpenPanel({
               {showHeader && (
                 <div
                   role="presentation"
-                  className="px-2.5 pt-2 pb-1 text-ui-xs font-medium text-fg-subtle"
+                  className="mv-label px-2.5 pt-2.5 pb-1 text-ui-xs text-fg-muted"
                 >
                   {result.item.group}
                 </div>
@@ -177,7 +177,7 @@ function QuickOpenPanel({
           );
         })}
       </div>
-      <div className="flex h-8 shrink-0 items-center gap-4 border-t border-border px-3.5 text-ui-xs text-fg-subtle">
+      <div className="flex h-9 shrink-0 items-center gap-4.5 border-t border-border px-4 text-ui-xs text-fg-muted">
         <span className="flex items-center gap-1.5">
           <Kbd shortcut="↑" />
           <Kbd shortcut="↓" />
@@ -234,8 +234,8 @@ const QuickOpenOption = memo(function QuickOpenOption({
         if (event.key === 'Enter') onChoose();
       }}
       className={clsx(
-        'flex h-9 items-center gap-2.5 rounded-md px-2.5',
-        selected ? 'bg-accent-subtle' : '',
+        'flex h-9.5 items-center gap-2.5 px-2.5',
+        selected ? 'mv-bar-left bg-accent-subtle' : '',
         item.missing && 'opacity-60',
       )}
     >
@@ -251,9 +251,11 @@ const QuickOpenOption = memo(function QuickOpenOption({
       <HighlightedText
         text={dir}
         indices={dirIndices}
-        className="min-w-0 flex-1 truncate text-ui-sm text-fg-subtle"
+        className="min-w-0 flex-1 truncate text-ui-sm text-fg-muted"
       />
-      {showGroup && <span className="shrink-0 text-ui-xs text-fg-subtle">{item.group}</span>}
+      {showGroup && (
+        <span className="mv-label shrink-0 text-ui-xs text-fg-muted">{item.group}</span>
+      )}
     </div>
   );
 });

@@ -23,7 +23,7 @@ export function Toaster() {
   return (
     <section
       aria-label="Notifications"
-      className="pointer-events-none fixed right-4 bottom-10 z-[80] flex w-[360px] max-w-[calc(100vw-32px)] flex-col items-stretch gap-2"
+      className="pointer-events-none fixed right-5 bottom-11 z-[80] flex w-[360px] max-w-[calc(100vw-32px)] flex-col items-stretch gap-4"
     >
       {toasts.map((t) => (
         <ToastItem key={t.id} toast={t} />
@@ -74,13 +74,15 @@ const ToastItem = memo(function ToastItem({ toast }: { toast: Toast }) {
         setPaused(false);
       }}
       className={clsx(
-        'animate-toast-in theme-surface pointer-events-auto flex gap-2.5 rounded-lg border border-border',
-        'bg-bg-elevated py-2.5 pr-2 pl-3 text-ui text-fg shadow-(--shadow-popover)',
+        'animate-toast-in theme-surface mv-marks pointer-events-auto flex gap-2.5 border border-border',
+        'bg-bg-elevated py-2.5 pr-2 pl-3.5 text-ui text-fg shadow-(--shadow-popover)',
       )}
     >
       <Icon aria-hidden className={clsx('mt-0.5 size-4 shrink-0', ICON_COLORS[toast.variant])} />
       <div className="min-w-0 flex-1">
-        <p className="font-medium break-words">{toast.title}</p>
+        <p className="font-heading text-ui-lg leading-tight font-semibold break-words">
+          {toast.title}
+        </p>
         {toast.description && (
           <p className="selectable mt-0.5 text-ui-sm break-words text-fg-muted">
             {toast.description}
@@ -97,10 +99,10 @@ const ToastItem = memo(function ToastItem({ toast }: { toast: Toast }) {
                   action.onClick();
                 }}
                 className={clsx(
-                  'h-6 rounded-sm px-2 text-ui-sm font-medium transition-colors duration-100',
+                  'h-6 px-2.5 font-heading text-ui font-semibold transition-colors duration-100',
                   action.primary
-                    ? 'bg-accent text-accent-fg hover:brightness-[1.06]'
-                    : 'border border-border-strong/80 text-fg hover:bg-bg-muted',
+                    ? 'border border-accent-solid bg-accent-solid text-accent-solid-fg hover:bg-accent-solid-hover'
+                    : 'border border-border text-fg hover:bg-bg-muted',
                 )}
               >
                 {action.label}
@@ -115,7 +117,7 @@ const ToastItem = memo(function ToastItem({ toast }: { toast: Toast }) {
         onClick={() => {
           dismissToast(toast.id);
         }}
-        className="flex size-6 shrink-0 items-center justify-center rounded-sm text-fg-subtle transition-colors duration-100 hover:bg-bg-muted hover:text-fg"
+        className="flex size-6 shrink-0 items-center justify-center text-fg-subtle transition-colors duration-100 hover:bg-bg-muted hover:text-fg"
       >
         <X aria-hidden className="size-3.5" />
       </button>

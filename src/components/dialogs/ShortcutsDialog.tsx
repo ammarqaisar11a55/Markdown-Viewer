@@ -46,8 +46,10 @@ export function ShortcutsDialog() {
       }}
       title="Keyboard Shortcuts"
       size="lg"
+      className="max-w-[680px]!"
     >
-      <div className="grid gap-x-8 px-5 pt-2 pb-5 sm:grid-cols-2">
+      {/* Columns are filled by width, so a narrow window falls back to one. */}
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-x-8 px-6 pt-2 pb-5">
         {CATEGORIES.map((category) => (
           <ShortcutGroup key={category} title={GROUP_TITLES[category]} rows={rowsFor(category)} />
         ))}
@@ -61,14 +63,17 @@ function ShortcutGroup({ title, rows }: { title: string; rows: readonly Row[] })
   if (rows.length === 0) return null;
   return (
     <section className="mt-3 break-inside-avoid">
-      <h3 className="border-b border-border pb-1.5 text-ui-sm font-semibold text-fg-muted">
-        {title}
-      </h3>
+      <h3 className="mv-label border-b border-border pb-1.5 text-ui-sm text-fg-muted">{title}</h3>
       <dl className="mt-1">
         {rows.map((row) => (
-          <div key={row.label} className="flex min-h-8 items-center gap-3 py-1">
+          <div
+            key={row.label}
+            className="flex min-h-9 items-center gap-3 border-b border-[var(--md-rule)] py-1"
+          >
             <dt className="min-w-0 flex-1 text-ui text-fg">{row.label}</dt>
-            <dd className="flex shrink-0 items-center gap-1.5 text-ui-xs text-fg-subtle">
+            {/* The key group wraps rather than pushing into the label: some
+                combinations are wider than half a two-column dialog. */}
+            <dd className="flex flex-wrap items-center justify-end gap-1.5 text-ui-xs text-fg-muted">
               {row.shortcuts.map((shortcut, index) => (
                 <Fragment key={shortcut}>
                   {index > 0 && <span>or</span>}

@@ -51,12 +51,12 @@ export const FileTreeNode = memo(function FileTreeNode({
       onContextMenu={(event) => {
         onContextMenu(node, event);
       }}
-      style={{ paddingLeft: 4 + (level - 1) * INDENT_PX }}
+      style={{ paddingLeft: 6 + (level - 1) * INDENT_PX }}
       className={clsx(
-        'focus-inset flex h-7 min-w-0 items-center gap-1 rounded-md pr-2 text-ui',
+        'focus-inset flex h-7 min-w-0 items-center gap-1.5 pr-2.5 text-ui',
         'transition-colors duration-75',
         selected
-          ? 'bg-accent-subtle text-accent'
+          ? 'mv-bar-left bg-accent-subtle text-accent'
           : disabled
             ? 'cursor-default text-fg-subtle'
             : 'text-fg hover:bg-bg-muted',

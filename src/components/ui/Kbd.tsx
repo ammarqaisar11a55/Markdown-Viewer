@@ -27,8 +27,9 @@ export function Kbd({ shortcut, className }: KbdProps) {
           // Keys may repeat ("Ctrl++"), so the position is part of the identity.
           key={`${key}-${index}`}
           className={clsx(
-            'inline-flex h-5 min-w-5 items-center justify-center rounded-sm px-1',
-            'border border-border border-b-border-strong bg-bg-inset',
+            'inline-flex h-[19px] min-w-5 items-center justify-center px-[5px]',
+            // A drawn key cap: hairline box with a doubled bottom rule.
+            'border border-b-2 border-border bg-transparent',
             'tabular text-ui-xs font-medium text-fg-muted',
           )}
         >

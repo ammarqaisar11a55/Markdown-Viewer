@@ -49,8 +49,8 @@ parts:
     plugin: nil
     source: .
     build-snaps:
+      # Ubuntu 24.04 ships Node 18, which is older than Vite needs.
       - node/22/stable
-      - rustup/latest/stable
     build-packages:
       - build-essential
       - curl
@@ -70,7 +70,15 @@ parts:
       craftctl set version="$(node -p "require('./package.json').version")"
     override-build: |
       set -eu
-      rustup default stable
+      # Rust comes from rustup's installer rather than the rustup snap: that
+      # snap links against a newer glibc than the GNOME SDK provides here, and
+      # dies on the first call inside the build container.
+      export RUSTUP_HOME="${CRAFT_PART_BUILD}/.rustup"
+      export CARGO_HOME="${CRAFT_PART_BUILD}/.cargo"
+      curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+        | sh -s -- -y --profile minimal --default-toolchain stable --no-modify-path
+      export PATH="${CARGO_HOME}/bin:${PATH}"
+      rustc --version
       npm ci
       npm run tauri build -- --bundles deb
       # The .deb already lays the app out the way a snap wants it.

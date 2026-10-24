@@ -8,6 +8,15 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-10-25
+
+### Fixed
+
+- The snap would not build. Rust came from the `rustup` snap, which links
+  against a newer glibc than the GNOME SDK inside the build container, so it
+  died on its first call; the build now installs Rust with rustup's own
+  installer instead.
+
 ## [1.5.0] - 2026-10-25
 
 ### Added
@@ -200,7 +209,8 @@ Initial release.
 - Remote image loading can be disabled; insecure `http:` images are always
   blocked.
 
-[Unreleased]: https://github.com/ammarqaisar11a55/Markdown-Viewer/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/ammarqaisar11a55/Markdown-Viewer/compare/v1.5.1...HEAD
+[1.5.1]: https://github.com/ammarqaisar11a55/Markdown-Viewer/releases/tag/v1.5.1
 [1.5.0]: https://github.com/ammarqaisar11a55/Markdown-Viewer/releases/tag/v1.5.0
 [1.4.0]: https://github.com/ammarqaisar11a55/Markdown-Viewer/releases/tag/v1.4.0
 [1.3.1]: https://github.com/ammarqaisar11a55/Markdown-Viewer/releases/tag/v1.3.1

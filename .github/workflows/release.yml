@@ -15,6 +15,7 @@ permissions:
 
 env:
   TAG: ${{ inputs.tag || github.ref_name }}
+  SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
 
 jobs:
   build:
@@ -130,3 +131,39 @@ jobs:
           # always targets that same release.
           $tag = ("${{ steps.tauri.outputs.releaseHtmlUrl }}" -split '/')[-1]
           gh release upload "$tag" "$env:PORTABLE_ZIP" --clobber
+
+  snap:
+    name: Snap
+    runs-on: ubuntu-24.04
+    # The snap carries the same version as the rest of the release, so it waits
+    # for the build that publishes it.
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
+
+      - name: Build the snap
+        id: snapcraft
+        uses: snapcore/action-build@v1
+
+      - name: Attach the snap to the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ env.TAG }}" "${{ steps.snapcraft.outputs.snap }}" --clobber
+
+      # Publishing needs a store token; without one the snap is still built and
+      # attached above, and this step says what is missing instead of failing.
+      - name: Publish to the Snap Store
+        if: ${{ env.SNAPCRAFT_STORE_CREDENTIALS != '' }}
+        uses: snapcore/action-publish@v1
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+        with:
+          snap: ${{ steps.snapcraft.outputs.snap }}
+          release: stable
+
+      - name: Explain a skipped publish
+        if: ${{ env.SNAPCRAFT_STORE_CREDENTIALS == '' }}
+        run: |
+          echo "::warning::SNAPCRAFT_STORE_CREDENTIALS is not set, so the snap was built and attached to the release but not published to the Snap Store."

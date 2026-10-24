@@ -25,6 +25,9 @@ pub enum InstallFlavor {
     /// tracked by the package manager, so only the package manager may replace
     /// them.
     Deb,
+    /// A snap: snapd refreshes it from the store on its own, and the app
+    /// cannot write into its own read-only mount even if it wanted to.
+    Snap,
     /// Anything else — the Windows installer, or a build started from a source
     /// tree — where the updater's own install path applies.
     Other,
@@ -32,17 +35,29 @@ pub enum InstallFlavor {
 
 /// Decides the install flavor from the running executable and the environment.
 ///
-/// `executable` is the resolved path of the running binary and `appimage` the
-/// value of the `APPIMAGE` variable, both looked up by the caller. An AppImage
-/// always exports `APPIMAGE`, and it is checked first: its binary runs from the
-/// image's mount point, which may itself sit under [`SYSTEM_PREFIX`].
-pub fn install_flavor(executable: Option<PathBuf>, appimage: Option<OsString>) -> InstallFlavor {
-    match appimage {
-        Some(path) if !path.is_empty() => InstallFlavor::AppImage,
-        _ => match executable {
-            Some(path) if path.starts_with(Path::new(SYSTEM_PREFIX)) => InstallFlavor::Deb,
-            _ => InstallFlavor::Other,
-        },
+/// `executable` is the resolved path of the running binary, `appimage` the
+/// value of the `APPIMAGE` variable and `snap` the value of `SNAP`, all looked
+/// up by the caller.
+///
+/// The environment is checked before the path because both an AppImage and a
+/// snap run their binary from a mount point that can itself sit under
+/// [`SYSTEM_PREFIX`] — a snap's does exactly that (`/snap/<name>/…/usr/bin`),
+/// so a path-first check would mistake it for a system package and offer to
+/// run the package manager over a read-only squashfs.
+pub fn install_flavor(
+    executable: Option<PathBuf>,
+    appimage: Option<OsString>,
+    snap: Option<OsString>,
+) -> InstallFlavor {
+    if appimage.is_some_and(|path| !path.is_empty()) {
+        return InstallFlavor::AppImage;
+    }
+    if snap.is_some_and(|path| !path.is_empty()) {
+        return InstallFlavor::Snap;
+    }
+    match executable {
+        Some(path) if path.starts_with(Path::new(SYSTEM_PREFIX)) => InstallFlavor::Deb,
+        _ => InstallFlavor::Other,
     }
 }
 
@@ -80,7 +95,11 @@ mod tests {
     use super::*;
 
     fn flavor(executable: &str, appimage: Option<&str>) -> InstallFlavor {
-        install_flavor(Some(PathBuf::from(executable)), appimage.map(OsString::from))
+        install_flavor(Some(PathBuf::from(executable)), appimage.map(OsString::from), None)
+    }
+
+    fn snap_flavor(executable: &str, snap: Option<&str>) -> InstallFlavor {
+        install_flavor(Some(PathBuf::from(executable)), None, snap.map(OsString::from))
     }
 
     #[test]
@@ -113,7 +132,26 @@ mod tests {
             flavor("C:\\Program Files\\Markdown Viewer\\markdown-viewer.exe", None),
             InstallFlavor::Other
         );
-        assert_eq!(install_flavor(None, None), InstallFlavor::Other);
+        assert_eq!(install_flavor(None, None, None), InstallFlavor::Other);
+    }
+
+    #[test]
+    fn a_snap_is_not_mistaken_for_a_package_install() {
+        // A snap runs from a read-only mount that sits under `/usr`, so the
+        // environment has to win over the path.
+        assert_eq!(
+            snap_flavor("/snap/markdown-viewer/42/usr/bin/markdown-viewer", Some("/snap/markdown-viewer/42")),
+            InstallFlavor::Snap
+        );
+        assert_eq!(snap_flavor("/usr/bin/markdown-viewer", Some("")), InstallFlavor::Deb);
+        assert_eq!(
+            install_flavor(
+                Some(PathBuf::from("/snap/markdown-viewer/42/usr/bin/markdown-viewer")),
+                Some(OsString::from("/home/u/mdv.AppImage")),
+                Some(OsString::from("/snap/markdown-viewer/42")),
+            ),
+            InstallFlavor::AppImage
+        );
     }
 
     #[test]

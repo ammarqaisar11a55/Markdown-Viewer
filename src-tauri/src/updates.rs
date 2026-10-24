@@ -50,8 +50,11 @@ pub struct DebUpdateReport {
 /// path to offer. Constant for the lifetime of the process.
 #[tauri::command]
 pub fn install_flavor() -> InstallFlavor {
-    let flavor =
-        mdv_core::install::install_flavor(std::env::current_exe().ok(), std::env::var_os("APPIMAGE"));
+    let flavor = mdv_core::install::install_flavor(
+        std::env::current_exe().ok(),
+        std::env::var_os("APPIMAGE"),
+        std::env::var_os("SNAP"),
+    );
     log::debug!("install flavor: {flavor:?}");
     flavor
 }

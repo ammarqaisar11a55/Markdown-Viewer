@@ -101,6 +101,8 @@ input.
 - On a Debian/Ubuntu install the app cannot write to `/usr` itself, so it hands
   the downloaded package to the system installer: you confirm once with your
   password and `apt` does the rest.
+- A snap updates itself through the Snap Store without being asked, so the app
+  simply says so instead of offering to install anything.
 - Every update is verified against the signing key built into the app, so only
   releases signed by the maintainer can install. Automatic checks can be turned
   off in Settings.
@@ -123,7 +125,7 @@ input.
 | Platform                         | Status    | Packages                                      |
 | -------------------------------- | --------- | --------------------------------------------- |
 | Windows 10 / 11 (x64)            | Supported | NSIS installer (`.exe`), portable `.exe`      |
-| Linux (Ubuntu/Debian and others) | Supported | `.deb`, AppImage                              |
+| Linux (Ubuntu/Debian and others) | Supported | snap, `.deb`, AppImage                        |
 | macOS                            | Planned   | The code is portable; packaging is not set up |
 
 The Windows build uses the Microsoft Edge WebView2 runtime, which ships with
@@ -139,6 +141,9 @@ Download the package for your platform from the
 - **Windows (portable):** run `markdown-viewer.exe` from any folder. The
   portable build does not register file associations and requires the WebView2
   runtime.
+- **Snap (Ubuntu and other distributions):**
+  `sudo snap install markdown-viewer-desktop` — the Snap Store keeps it
+  updated for you, so there is nothing to download again.
 - **Debian/Ubuntu:** `sudo apt install ./markdown-viewer_<version>_amd64.deb`
 - **AppImage:** `chmod +x Markdown*.AppImage && ./Markdown*.AppImage`
 
@@ -510,6 +515,9 @@ vulnerability.
 - macOS is not packaged yet.
 - In-app updates work from 1.2.0 onwards: earlier builds have no updater, so
   upgrading to 1.2.0 is a manual download.
+- The snap is strictly confined: it can read documents in your home directory
+  and on removable media, which covers normal use but not files elsewhere on
+  the system.
 - Updating a Debian package needs your password, because `apt` owns the
   installed files; the AppImage and the Windows installer update without one.
   If `pkexec` is missing the app downloads the package and shows it to you

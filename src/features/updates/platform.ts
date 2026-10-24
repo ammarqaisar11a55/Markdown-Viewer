@@ -17,7 +17,7 @@ export const CHECK_TIMEOUT_MS = 20_000;
 export type PendingUpdate = Pick<Update, 'version' | 'body' | 'downloadAndInstall'>;
 
 /** How this copy of the app was installed (see `install_flavor` in Rust). */
-export type InstallFlavor = 'appImage' | 'deb' | 'other';
+export type InstallFlavor = 'appImage' | 'deb' | 'snap' | 'other';
 
 /** What handing a package to the system installer ended in. */
 export type DebInstallOutcome = 'installed' | 'cancelled' | 'installerMissing';
@@ -37,7 +37,7 @@ export const UPDATE_PROGRESS_EVENT = 'update-progress';
 let flavor: InstallFlavor | null = null;
 
 function isInstallFlavor(value: unknown): value is InstallFlavor {
-  return value === 'appImage' || value === 'deb' || value === 'other';
+  return value === 'appImage' || value === 'deb' || value === 'snap' || value === 'other';
 }
 
 /**

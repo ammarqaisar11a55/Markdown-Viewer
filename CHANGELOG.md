@@ -8,6 +8,13 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- A snap package, published as `markdown-viewer-desktop`. The Snap Store
+  refreshes it automatically, so that installation never has to download a
+  release by hand; the app recognises it and leaves updating to the store
+  rather than offering to install anything itself.
+
 ## [1.4.0] - 2026-10-24
 
 ### Changed

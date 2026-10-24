@@ -458,3 +458,31 @@ describe('installUpdate on a .deb install', () => {
     expect(backend.callsOf('plugin:process|restart')).toHaveLength(1);
   });
 });
+
+describe('snap installations', () => {
+  /** An IPC mock for an app that was installed from the Snap Store. */
+  function snapBackend() {
+    return mockBackend({
+      install_flavor: () => 'snap',
+      'plugin:event|listen': captureListener,
+      'plugin:updater|check': () => metadata(),
+    });
+  }
+
+  it('leaves updating to the Snap Store and says so when asked', async () => {
+    const backend = snapBackend();
+    await checkForUpdates({ manual: true });
+    // snapd refreshes the snap itself, so the app must not even look.
+    expect(backend.callsOf('plugin:updater|check')).toHaveLength(0);
+    expect(useUpdates.getState().status).toBe('upToDate');
+    expect(useToasts.getState().toasts.at(-1)?.title).toBe(
+      'The Snap Store keeps this app up to date.',
+    );
+  });
+
+  it('stays silent on an automatic check', async () => {
+    snapBackend();
+    await checkForUpdates();
+    expect(useToasts.getState().toasts).toEqual([]);
+  });
+});

@@ -24,6 +24,8 @@ export function installHint(flavor: InstallFlavor | null): string | null {
       return 'Updates install through your system package manager, which asks for your permission.';
     case 'appImage':
       return 'Updates replace the AppImage this app runs from.';
+    case 'snap':
+      return 'The Snap Store keeps this installation up to date automatically.';
     case 'other':
     case null:
       return null;

@@ -1,0 +1,80 @@
+name: markdown-viewer-desktop
+title: Markdown Viewer
+license: MIT
+base: core24
+# The version is taken from package.json by the build below.
+adopt-info: markdown-viewer
+summary: A fast, secure, offline reader for Markdown files
+description: |
+  Markdown Viewer opens `.md` and `.mdx` files and makes them comfortable to
+  read: clean typography, syntax-highlighted code, a live table of contents,
+  tabs, folder browsing and automatic reloads when a file changes on disk.
+
+  An opt-in editor saves changes back to the file when you need to fix a typo,
+  and the app works fully offline — fonts and highlighting grammars are
+  bundled.
+
+  Every document is treated as untrusted input: HTML is sanitized against an
+  allow-list, scripts never run, and links to the web open in your browser
+  rather than inside the app.
+
+grade: stable
+confinement: strict
+compression: lzo
+
+platforms:
+  amd64:
+
+apps:
+  markdown-viewer-desktop:
+    command: usr/bin/markdown-viewer
+    desktop: usr/share/applications/markdown-viewer.desktop
+    extensions: [gnome]
+    common-id: com.ammarqaisar.markdownviewer
+    plugs:
+      # Documents the user opens, and the pictures they reference.
+      - home
+      - removable-media
+      # Remote images in documents, and "open link in browser".
+      - network
+      - desktop
+      - desktop-legacy
+      - wayland
+      - x11
+      - opengl
+      - browser-support
+
+parts:
+  markdown-viewer:
+    plugin: nil
+    source: .
+    build-snaps:
+      - node/22/stable
+      - rustup/latest/stable
+    build-packages:
+      - build-essential
+      - curl
+      - file
+      - libayatana-appindicator3-dev
+      - librsvg2-dev
+      - libssl-dev
+      - libwebkit2gtk-4.1-dev
+      - libxdo-dev
+      - pkg-config
+      - wget
+    stage-packages:
+      - libayatana-appindicator3-1
+      - libwebkit2gtk-4.1-0
+    override-pull: |
+      craftctl default
+      craftctl set version="$(node -p "require('./package.json').version")"
+    override-build: |
+      set -eu
+      rustup default stable
+      npm ci
+      npm run tauri build -- --bundles deb
+      # The .deb already lays the app out the way a snap wants it.
+      dpkg -x src-tauri/target/release/bundle/deb/*.deb "${CRAFT_PART_INSTALL}"
+      # Inside the snap the icon is addressed by path, not by theme name.
+      sed -i -e 's|^Icon=markdown-viewer$|Icon=/usr/share/icons/hicolor/128x128/apps/markdown-viewer.png|' \
+        "${CRAFT_PART_INSTALL}/usr/share/applications/markdown-viewer.desktop"

@@ -36,6 +36,7 @@ export const MANUAL_INSTALL_TOAST_ID = 'update-manual-install';
 const INSTALL_DESCRIPTION: Record<InstallFlavor, string> = {
   appImage: 'Installing it restarts Markdown Viewer.',
   deb: 'Installing it asks for your permission, then restarts Markdown Viewer.',
+  snap: 'The Snap Store installs it for you.',
   other: 'Installing it restarts Markdown Viewer.',
 };
 
@@ -120,6 +121,20 @@ export async function checkForUpdates({
 }: CheckForUpdatesOptions = {}): Promise<void> {
   if (!isTauri()) {
     logger.info('Updates are only available in the desktop app');
+    return;
+  }
+  // snapd refreshes a snap from the store on its own, and the app's files are
+  // a read-only mount it could not replace anyway.
+  if ((await currentFlavor()) === 'snap') {
+    logger.info('Updates for this installation are handled by the Snap Store');
+    useUpdates.getState().foundNoUpdate();
+    if (manual) {
+      toast({
+        variant: 'info',
+        title: 'The Snap Store keeps this app up to date.',
+        description: 'New versions install automatically, usually within a day.',
+      });
+    }
     return;
   }
   if (!manual) {

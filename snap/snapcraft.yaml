@@ -85,6 +85,13 @@ parts:
       npm run tauri build -- --bundles deb --config '{"bundle":{"createUpdaterArtifacts":false}}'
       # The .deb already lays the app out the way a snap wants it.
       dpkg -x src-tauri/target/release/bundle/deb/*.deb "${CRAFT_PART_INSTALL}"
-      # Inside the snap the icon is addressed by path, not by theme name.
+      # The bundler names the entry after the product ("Markdown Viewer.desktop");
+      # give it a space-free name the snap's `desktop:` key can point at.
+      apps="${CRAFT_PART_INSTALL}/usr/share/applications"
+      mv "${apps}/Markdown Viewer.desktop" "${apps}/markdown-viewer.desktop"
+      # Inside the snap the icon is addressed by path, not by theme name, and
+      # TryExec goes: the snap's command is not `markdown-viewer` on the host's
+      # PATH, so desktops would hide the entry from their menus.
       sed -i -e 's|^Icon=markdown-viewer$|Icon=/usr/share/icons/hicolor/128x128/apps/markdown-viewer.png|' \
-        "${CRAFT_PART_INSTALL}/usr/share/applications/markdown-viewer.desktop"
+        -e '/^TryExec=/d' \
+        "${apps}/markdown-viewer.desktop"

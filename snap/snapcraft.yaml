@@ -80,7 +80,9 @@ parts:
       export PATH="${CARGO_HOME}/bin:${PATH}"
       rustc --version
       npm ci
-      npm run tauri build -- --bundles deb
+      # snapd updates the snap itself, so the build skips the updater's signed
+      # artifacts — and the release signing key never enters this container.
+      npm run tauri build -- --bundles deb --config '{"bundle":{"createUpdaterArtifacts":false}}'
       # The .deb already lays the app out the way a snap wants it.
       dpkg -x src-tauri/target/release/bundle/deb/*.deb "${CRAFT_PART_INSTALL}"
       # Inside the snap the icon is addressed by path, not by theme name.

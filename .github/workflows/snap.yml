@@ -1,0 +1,38 @@
+name: Snap
+
+# Builds the snap whenever its packaging or the build inputs change, so a
+# broken snap is caught on `main` instead of during a release. Nothing here
+# publishes: releases do that, from release.yml.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'snap/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'src-tauri/Cargo.toml'
+      - 'src-tauri/Cargo.lock'
+      - 'src-tauri/tauri.conf.json'
+      - '.github/workflows/snap.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build the snap
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build
+        id: snapcraft
+        uses: snapcore/action-build@v1
+
+      - name: Keep the snap for a week
+        uses: actions/upload-artifact@v4
+        with:
+          name: snap
+          path: ${{ steps.snapcraft.outputs.snap }}
+          retention-days: 7

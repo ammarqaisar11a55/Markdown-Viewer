@@ -8,6 +8,15 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [1.5.2] - 2026-10-28
+
+### Fixed
+
+- The snap builds and is published to the Snap Store as
+  `markdown-viewer-desktop`. Its build no longer tries to sign updater
+  artifacts (snapd updates snaps itself), it unpacks the right package and
+  desktop entry, and the app keeps its menu entry inside the snap.
+
 ## [1.5.1] - 2026-10-25
 
 ### Fixed
@@ -209,7 +218,8 @@ Initial release.
 - Remote image loading can be disabled; insecure `http:` images are always
   blocked.
 
-[Unreleased]: https://github.com/ammarqaisar11a55/Markdown-Viewer/compare/v1.5.1...HEAD
+[Unreleased]: https://github.com/ammarqaisar11a55/Markdown-Viewer/compare/v1.5.2...HEAD
+[1.5.2]: https://github.com/ammarqaisar11a55/Markdown-Viewer/releases/tag/v1.5.2
 [1.5.1]: https://github.com/ammarqaisar11a55/Markdown-Viewer/releases/tag/v1.5.1
 [1.5.0]: https://github.com/ammarqaisar11a55/Markdown-Viewer/releases/tag/v1.5.0
 [1.4.0]: https://github.com/ammarqaisar11a55/Markdown-Viewer/releases/tag/v1.4.0
